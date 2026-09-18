@@ -44,10 +44,18 @@ do Vercel, que têm rede aberta.
 Nenhuma rota deve chamar `prisma.<model>.findMany()` (ou qualquer método)
 diretamente. Toda leitura/escrita passa por `withTenantContext` (`src/lib/db.ts`),
 que seta `app.current_tenant_id`/`app.current_role` na sessão de banco antes
-da query — é o que ativa a policy RLS de `supabase/migrations/0001_multi_tenant_rls.sql`.
+da query — é o que ativa as policies RLS de `supabase/migrations/000*.sql`.
 Uma query fora desse caminho não vaza dado (a RLS barra mesmo sem o contexto
 setado, ver comentário no arquivo), mas também não retorna nada — ou seja,
 "esquecer" o wrapper quebra a feature, não a segurança. Isso é deliberado.
+
+**Toda migration nova precisa passar pelo advisor de segurança do Supabase**
+antes de ser considerada pronta (`mcp__Supabase__get_advisors`, tipo
+`security`, ou o Database Linter no dashboard). A migration 0001 original
+cobria só as tabelas filhas (assessments, deliverables, etc.) e o advisor
+pegou `tenants`/`users` sem RLS nenhuma, expostas por completo via
+PostgREST — corrigido em 0002. Não confie só na leitura manual do SQL para
+confirmar cobertura de RLS.
 
 ## O que existe hoje
 
