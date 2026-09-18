@@ -1,3 +1,4 @@
+import { PrismaPg } from "@prisma/adapter-pg";
 import { Prisma, PrismaClient } from "@prisma/client";
 
 /**
@@ -18,15 +19,24 @@ import { Prisma, PrismaClient } from "@prisma/client";
  * `tenant_id = null`, e a query retorna vazio (falha segura), não vaza dado.
  * O teste obrigatório #1 (spec seção 9) verifica exatamente essa garantia
  * fim a fim, não só que este arquivo exista.
+ *
+ * `engineType = "client"` (schema.prisma) troca o engine binário Rust por
+ * WASM + driver adapter — não instancia sem um adapter configurado
+ * (`PrismaClientInitializationError: Missing configured driver adapter`,
+ * detectado no primeiro build real com uma rota importando este módulo).
+ * `PrismaPg` usa `pg.Pool` para falar com o pooler do Supabase (porta 6543,
+ * pgbouncer em modo transaction) via `DATABASE_URL`.
  */
 
 declare global {
   var __prisma: PrismaClient | undefined;
 }
 
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+
 // Evita recriar o client a cada hot-reload em dev (padrão recomendado do
 // próprio Prisma para Next.js).
-export const prisma = globalThis.__prisma ?? new PrismaClient();
+export const prisma = globalThis.__prisma ?? new PrismaClient({ adapter });
 if (process.env.NODE_ENV !== "production") {
   globalThis.__prisma = prisma;
 }

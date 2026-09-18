@@ -69,6 +69,11 @@ confirmar cobertura de RLS.
   ar) e `database` (`SELECT 1` via `DATABASE_URL`) separadamente, fora de
   `withTenantContext` — não lê dado de tenant, só confirma que o Postgres do
   Supabase está alcançável a partir do runtime do Vercel.
+- `src/lib/db.ts` instancia o Prisma Client com `@prisma/adapter-pg`
+  (`engineType = "client"` exige um driver adapter explícito — sem ele,
+  `new PrismaClient()` lança `PrismaClientInitializationError` assim que o
+  módulo é avaliado; só não aparecia porque nenhuma rota importava
+  `db.ts` antes do health-check acima).
 - 4 testes obrigatórios da seção 9 da spec, com status honesto: os que
   dependem de banco/API real (#1, #2, #4) ficam `skip`/`fixme` até essa
   infraestrutura existir — ver comentário em cada arquivo de teste.
