@@ -65,7 +65,10 @@ confirmar cobertura de RLS.
   (função pura, testada, sem chamada a IA — spec seção 6.1).
 - `src/lib/ai-provider.ts` — contrato da camada de abstração de IA (módulo
   C1); implementação real fica para quando esse módulo entrar em desenvolvimento.
-- `src/app/api/health` — health-check de deploy.
+- `src/app/api/health` — health-check de deploy; reporta `service` (build no
+  ar) e `database` (`SELECT 1` via `DATABASE_URL`) separadamente, fora de
+  `withTenantContext` — não lê dado de tenant, só confirma que o Postgres do
+  Supabase está alcançável a partir do runtime do Vercel.
 - 4 testes obrigatórios da seção 9 da spec, com status honesto: os que
   dependem de banco/API real (#1, #2, #4) ficam `skip`/`fixme` até essa
   infraestrutura existir — ver comentário em cada arquivo de teste.
