@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plataforma Ferrari
 
-## Getting Started
+Dashboard interno (RH Estratégico & DP Operacional) e portal de acompanhamento
+para clientes da Ferrari Consultoria.
 
-First, run the development server:
+**Status atual: esqueleto de infraestrutura, sem módulos de produto.** Este
+repositório valida a arquitetura decidida na especificação técnica — deploy,
+banco, isolamento multi-tenant, CI/CD — antes da implementação de B1
+(Assessment/Diagnóstico), B6 (Gestão de carteira) e C1 (IA generativa de
+entregáveis), os três módulos de Prioridade 1 do MVP.
+
+Fonte da arquitetura e das decisões abaixo:
+`.board/phases/f3_escopo_mvp/especificacao_plataforma_dev.md` (spec técnica
+v2.0) e `prd_plataforma.md` (escopo funcional), no repositório do conselho
+consultivo do projeto.
+
+## Stack
+
+TypeScript ponta a ponta · Next.js 16 (App Router, Turbopack) · Prisma
+(`engineType = "client"`, driver adapters — sem binário nativo, alinhado ao
+runtime serverless do Vercel) · PostgreSQL via Supabase (Row-Level Security
+para isolamento multi-tenant) · Auth.js (credenciais + magic link) · Vitest +
+Playwright · GitHub Actions.
+
+Racional de cada escolha: seção 2 da especificação técnica.
+
+## Rodando localmente
 
 ```bash
+npm install
+cp .env.example .env.local   # preencha DATABASE_URL com um Postgres real
+npx prisma generate
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`npm run build` funciona com um `DATABASE_URL` placeholder — nenhuma rota
+hoje consulta o banco (ver "O que existe hoje"). `npx prisma generate` baixa
+o engine da Prisma de `binaries.prisma.sh`; se a rede estiver atrás de um
+proxy restritivo, isso falha — não falha no CI do GitHub Actions nem no build
+do Vercel, que têm rede aberta.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Segurança multi-tenant — leia antes de escrever uma query
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Nenhuma rota deve chamar `prisma.<model>.findMany()` (ou qualquer método)
+diretamente. Toda leitura/escrita passa por `withTenantContext` (`src/lib/db.ts`),
+que seta `app.current_tenant_id`/`app.current_role` na sessão de banco antes
+da query — é o que ativa a policy RLS de `supabase/migrations/0001_multi_tenant_rls.sql`.
+Uma query fora desse caminho não vaza dado (a RLS barra mesmo sem o contexto
+setado, ver comentário no arquivo), mas também não retorna nada — ou seja,
+"esquecer" o wrapper quebra a feature, não a segurança. Isso é deliberado.
 
-## Learn More
+## O que existe hoje
 
-To learn more about Next.js, take a look at the following resources:
+- `prisma/schema.prisma` — as 10 entidades-base da seção 5 da spec.
+- `supabase/migrations/0001_multi_tenant_rls.sql` — isolamento por tenant, RLS.
+- `src/lib/scoring/exposicao-trabalhista.ts` — motor de score do módulo B1
+  (função pura, testada, sem chamada a IA — spec seção 6.1).
+- `src/lib/ai-provider.ts` — contrato da camada de abstração de IA (módulo
+  C1); implementação real fica para quando esse módulo entrar em desenvolvimento.
+- `src/app/api/health` — health-check de deploy.
+- 4 testes obrigatórios da seção 9 da spec, com status honesto: os que
+  dependem de banco/API real (#1, #2, #4) ficam `skip`/`fixme` até essa
+  infraestrutura existir — ver comentário em cada arquivo de teste.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## O que NÃO existe ainda (não é bug, é escopo)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Nenhuma tela de produto (wizard de diagnóstico, carteira, pipeline,
+faturamento, editor de entregável), autenticação real, Supabase Storage,
+integração com a API da Anthropic. Ver seção 6 da spec técnica para o
+desenho de cada tela antes de implementar.
 
-## Deploy on Vercel
+## Vulnerabilidade conhecida (dependência de desenvolvimento)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`npm audit` reporta 3 "high" em `deepmerge-ts` via `@prisma/config` →
+`prisma` (CLI). É uma dependência só de desenvolvimento (não entra no
+bundle de produção — `@prisma/client`, que roda em produção, não depende
+dela) e o problema é um DoS por stack exhaustion ao mesclar objetos de
+config profundamente recursivos — não há vetor de exploração pela aplicação
+implantada. É um problema upstream do Prisma (toda a linha 6.13+ é afetada
+até a correção subir); reavaliar quando uma versão corrigida for publicada,
+não fazer downgrade do Prisma para "resolver".

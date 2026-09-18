@@ -1,0 +1,227 @@
+// Plataforma Ferrari — schema de dados
+//
+// Fonte: phases/f3_escopo_mvp/especificacao_plataforma_dev.md, seção 5.
+// Este arquivo é o ponto de partida (as entidades que "todo o resto depende"),
+// não o schema completo — o time de desenvolvimento expande os campos conforme
+// cada módulo (B1, B6, C1) é implementado.
+//
+// Decisão de segurança que precede este arquivo (seção 4 da spec): nenhuma
+// query pode depender só da aplicação para isolar por tenant. A camada
+// Row-Level Security (ver supabase/migrations/0001_multi_tenant_rls.sql) é a
+// rede de segurança redundante no próprio banco — este schema só declara os
+// dados; quem aplica o isolamento é a policy SQL, não o Prisma Client.
+
+// engineType "client" (driver adapters, sem binário nativo baixado) —
+// decisão deliberada, não só workaround de sandbox: é o modo recomendado
+// pela própria Prisma para runtime serverless/edge (Vercel, spec seção 2),
+// menor cold start e sem depender de um binário Rust por plataforma.
+// Requer @prisma/adapter-pg + pg (ver src/lib/db.ts) na hora de instanciar
+// o client.
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin // Administradora (Eliane) — acesso a todos os tenants
+  staff // Colaborador da consultoria (futuro) — mesmo escopo que admin
+  client_owner // Cliente (dono/gerente) — só o próprio tenant
+}
+
+enum TenantStatus {
+  ativo
+  risco_churn
+  encerrado
+}
+
+enum DeliverableStatus {
+  rascunho
+  em_revisao
+  aprovado
+  enviado
+}
+
+enum ActivityType {
+  entrega
+  prospeccao
+  administrativo
+}
+
+enum PipelineStage {
+  contato
+  reuniao
+  diagnostico
+  fechamento
+}
+
+enum InvoiceStatus {
+  pendente
+  pago
+  atrasado
+}
+
+enum SensitiveRecordType {
+  saude_ocupacional
+  bancario
+}
+
+/// Um cliente da consultoria — unidade de isolamento de dados (tenant).
+model Tenant {
+  id               String       @id @default(uuid())
+  razaoSocial      String       @map("razao_social")
+  cnpj             String       @unique
+  porte            String
+  segmento         String
+  pacoteContratado String?      @map("pacote_contratado")
+  status           TenantStatus @default(ativo)
+  createdAt        DateTime     @default(now()) @map("created_at")
+
+  users         User[]
+  assessments   Assessment[]
+  deliverables  Deliverable[]
+  timeEntries   TimeEntry[]
+  pipelineLeads PipelineLead[]
+  invoices      Invoice[]
+  dataSubjects  DataSubject[]
+  auditLogs     AuditLog[]
+
+  @@map("tenants")
+}
+
+/// Autenticação e escopo de acesso. tenantId nulo = admin/staff.
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  role      Role
+  tenantId  String?  @map("tenant_id")
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+
+  auditLogs AuditLog[]
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+/// Módulo B1 — Assessment / Diagnóstico.
+model Assessment {
+  id             String   @id @default(uuid())
+  tenantId       String   @map("tenant_id")
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  respostas      Json
+  scoreExposicao Int?     @map("score_exposicao")
+  status         String   @default("rascunho")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@map("assessments")
+}
+
+/// Módulo C1 — geração assistida por IA. `status` implementa a regra de
+/// revisão humana obrigatória (spec seção 8.3): só a administradora, por ação
+/// explícita, move em_revisao → aprovado; só aprovado → enviado dispara envio real.
+model Deliverable {
+  id          String            @id @default(uuid())
+  tenantId    String            @map("tenant_id")
+  tenant      Tenant            @relation(fields: [tenantId], references: [id])
+  tipo        String
+  conteudo    String
+  status      DeliverableStatus @default(rascunho)
+  geradoPorIa Boolean           @default(false) @map("gerado_por_ia")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@map("deliverables")
+}
+
+/// Módulo B6 — controle de horas, alimenta o painel de capacidade.
+model TimeEntry {
+  id             String       @id @default(uuid())
+  tenantId       String       @map("tenant_id")
+  tenant         Tenant       @relation(fields: [tenantId], references: [id])
+  atividade      ActivityType
+  duracaoMinutos Int          @map("duracao_minutos")
+  data           DateTime
+
+  @@index([tenantId])
+  @@map("time_entries")
+}
+
+/// Módulo B6 — funil comercial. tenantId nulo até o lead virar cliente.
+model PipelineLead {
+  id       String        @id @default(uuid())
+  tenantId String?       @map("tenant_id")
+  tenant   Tenant?       @relation(fields: [tenantId], references: [id])
+  estagio  PipelineStage @default(contato)
+
+  @@index([tenantId])
+  @@map("pipeline_leads")
+}
+
+/// Módulo B6 — faturamento. Sem gateway de pagamento no MVP (spec seção 7):
+/// cobrança registrada e marcada manualmente.
+model Invoice {
+  id         String        @id @default(uuid())
+  tenantId   String        @map("tenant_id")
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  competencia String
+  valor      Decimal       @db.Decimal(10, 2)
+  status     InvoiceStatus @default(pendente)
+
+  @@index([tenantId])
+  @@map("invoices")
+}
+
+/// Colaboradores do cliente — titulares de dado (LGPD), não usuários do
+/// sistema no MVP (spec seção 3). Nenhum dado pode existir sem consentimento
+/// registrado primeiro (seção 8.5) — ver constraint em migration futura.
+model DataSubject {
+  id                        String    @id @default(uuid())
+  tenantId                  String    @map("tenant_id")
+  tenant                    Tenant    @relation(fields: [tenantId], references: [id])
+  nome                      String
+  cpfCriptografado          String    @map("cpf_criptografado")
+  consentimentoRegistradoEm DateTime? @map("consentimento_registrado_em")
+
+  sensitiveRecords SensitiveRecord[]
+
+  @@index([tenantId])
+  @@map("data_subjects")
+}
+
+/// Tabela separada e mais restrita que data_subjects (spec seção 8.1) —
+/// nunca uma coluna a mais no cadastro. Toda leitura grava em audit_log,
+/// sem exceção, mesmo pela administradora.
+model SensitiveRecord {
+  id                String              @id @default(uuid())
+  dataSubjectId     String              @map("data_subject_id")
+  dataSubject       DataSubject         @relation(fields: [dataSubjectId], references: [id])
+  tipo              SensitiveRecordType
+  conteudoCriptografado String           @map("conteudo_criptografado")
+  createdAt         DateTime            @default(now()) @map("created_at")
+
+  @@map("sensitive_records")
+}
+
+/// Toda leitura/edição/exportação de SensitiveRecord grava aqui sem exceção
+/// (spec seção 8.1) — é a evidência de conformidade, não uma tabela opcional.
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id])
+  tenantId   String   @map("tenant_id")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  acao       String
+  entidade   String
+  entidadeId String   @map("entidade_id")
+  timestamp  DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("audit_log")
+}

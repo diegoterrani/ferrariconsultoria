@@ -1,0 +1,66 @@
+# CI (spec seção 10): lint → typecheck → testes unitários → os 4 testes
+# obrigatórios da seção 9. Merge bloqueado se qualquer etapa falhar.
+#
+# Os testes obrigatórios #1, #2 e #4 (tenant isolation, máquina de estados
+# de deliverable, E2E do diagnóstico) rodam de verdade só quando o secret
+# DATABASE_URL_TEST existir (projeto Supabase de staging) — até lá, o job
+# os lista como pulados/pendentes, nunca como verdes por omissão. Ver o
+# comentário de status em cada arquivo de teste.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint-typecheck-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Gerar Prisma Client
+        run: npx prisma generate
+
+      - name: Testes unitários e de integração (Vitest)
+        run: npm run test
+        env:
+          DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
+
+      - name: Build (valida o deploy antes do Vercel construir)
+        run: npm run build
+        env:
+          # Placeholder — build não deve exigir banco real em CI.
+          DATABASE_URL: "postgresql://user:pass@localhost:5432/placeholder"
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: lint-typecheck-test
+    if: ${{ vars.DATABASE_URL_TEST != '' || secrets.DATABASE_URL_TEST != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: E2E (teste obrigatório #4)
+        run: npm run test:e2e
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
