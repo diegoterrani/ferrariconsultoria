@@ -59,6 +59,14 @@ enum PipelineStage {
   fechamento
 }
 
+/// Decisão do cliente registrada na página de resultado do diagnóstico
+/// (spec seção 6.1, modal "Registrar decisão do cliente").
+enum DecisaoCliente {
+  aceite
+  recusa
+  nao_agora
+}
+
 enum InvoiceStatus {
   pendente
   pago
@@ -94,13 +102,20 @@ model Tenant {
 }
 
 /// Autenticação e escopo de acesso. tenantId nulo = admin/staff.
+///
+/// passwordHash: só admin/staff autenticam no MVP (spec seção 3 — cliente
+/// tem portal próprio, fora desta fatia; colaborador do cliente não é
+/// usuário). NOT NULL porque não existe ainda nenhuma linha client_owner —
+/// quando o portal for implementado, essa constraint é revisitada, não
+/// contornada com valor vazio.
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  role      Role
-  tenantId  String?  @map("tenant_id")
-  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role
+  tenantId     String?  @map("tenant_id")
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
 
   auditLogs AuditLog[]
 
@@ -109,6 +124,18 @@ model User {
 }
 
 /// Módulo B1 — Assessment / Diagnóstico.
+///
+/// tenantId é NOT NULL desde o primeiro passo do wizard: a entrada
+/// `/assessments/novo` cria (ou reaproveita, por CNPJ) o registro de Tenant
+/// ali mesmo — "tenant" aqui é "empresa cadastrada", não necessariamente
+/// cliente pagante; `pacoteContratado` continua nulo e `status` continua
+/// no default `ativo` até o fechamento comercial real (spec seção 6.1 não
+/// resolve isso explicitamente; esta é a decisão adotada, documentada aqui
+/// em vez de um campo TenantStatus.prospect que a spec não define).
+///
+/// status (texto livre, spec seção 5 não enumera valores): "rascunho"
+/// enquanto o wizard está em andamento (autosave por passo), "concluido"
+/// depois que o score é calculado.
 model Assessment {
   id             String   @id @default(uuid())
   tenantId       String   @map("tenant_id")
@@ -117,6 +144,9 @@ model Assessment {
   scoreExposicao Int?     @map("score_exposicao")
   status         String   @default("rascunho")
   createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  pipelineLeads PipelineLead[]
 
   @@index([tenantId])
   @@map("assessments")
@@ -154,13 +184,26 @@ model TimeEntry {
 }
 
 /// Módulo B6 — funil comercial. tenantId nulo até o lead virar cliente.
+///
+/// assessmentId + decisao/motivoDecisao: preenchidos pelo modal "Registrar
+/// decisão do cliente" na página de resultado do diagnóstico (spec seção
+/// 6.1) — é o que a seção 6.2 chama de "link direto para o diagnóstico (B1)
+/// associado" ao abrir um card do Kanban.
 model PipelineLead {
-  id       String        @id @default(uuid())
-  tenantId String?       @map("tenant_id")
-  tenant   Tenant?       @relation(fields: [tenantId], references: [id])
-  estagio  PipelineStage @default(contato)
+  id             String          @id @default(uuid())
+  tenantId       String?         @map("tenant_id")
+  tenant         Tenant?         @relation(fields: [tenantId], references: [id])
+  estagio        PipelineStage   @default(contato)
+  assessmentId   String?         @map("assessment_id")
+  assessment     Assessment?     @relation(fields: [assessmentId], references: [id])
+  decisao        DecisaoCliente?
+  motivoDecisao  String?         @map("motivo_decisao")
+  pacoteSugerido String?         @map("pacote_sugerido")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
 
   @@index([tenantId])
+  @@index([assessmentId])
   @@map("pipeline_leads")
 }
 
