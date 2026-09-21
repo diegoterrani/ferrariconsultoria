@@ -4,6 +4,9 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/db";
 
+import { LABELS_TIPO, type TipoEntregavel } from "@/lib/entregaveis/templates";
+
+import { GerarEntregavelModal } from "../../entregaveis/gerar-entregavel-modal";
 import { EditarPacote } from "./editar-pacote";
 
 type RouteParams = { params: Promise<{ id: string }>; searchParams: Promise<{ aba?: string }> };
@@ -26,6 +29,13 @@ const INVOICE_STATUS_LABEL: Record<string, string> = {
   pendente: "Pendente",
   pago: "Pago",
   atrasado: "Atrasado",
+};
+
+const DELIVERABLE_STATUS_LABEL: Record<string, string> = {
+  rascunho: "Rascunho",
+  em_revisao: "Em revisão",
+  aprovado: "Aprovado",
+  enviado: "Enviado",
 };
 
 /**
@@ -56,12 +66,13 @@ export default async function ClienteDetalhePage({ params, searchParams }: Route
   };
   type TimeEntry = { id: string; atividade: string; duracaoMinutos: number; data: Date };
   type Invoice = { id: string; competencia: string; valor: unknown; status: string };
+  type Deliverable = { id: string; titulo: string; tipo: string; status: string; createdAt: Date };
 
   // Cast explícito pelo mesmo motivo documentado em carteira/page.tsx e
   // (app)/layout.tsx: client Prisma stub neste sandbox (ver README).
-  const { tenant, timeEntries, invoices } = (await withTenantContext(ctx, async (tx) => {
+  const { tenant, timeEntries, invoices, deliverables } = (await withTenantContext(ctx, async (tx) => {
     const tenant = await tx.tenant.findUnique({ where: { id } });
-    if (!tenant) return { tenant: null, timeEntries: [], invoices: [] };
+    if (!tenant) return { tenant: null, timeEntries: [], invoices: [], deliverables: [] };
 
     const timeEntries = await tx.timeEntry.findMany({
       where: { tenantId: id },
@@ -72,8 +83,17 @@ export default async function ClienteDetalhePage({ params, searchParams }: Route
       where: { tenantId: id },
       orderBy: { competencia: "desc" },
     });
-    return { tenant, timeEntries, invoices };
-  })) as { tenant: Tenant | null; timeEntries: TimeEntry[]; invoices: Invoice[] };
+    const deliverables = await tx.deliverable.findMany({
+      where: { tenantId: id },
+      orderBy: { createdAt: "desc" },
+    });
+    return { tenant, timeEntries, invoices, deliverables };
+  })) as {
+    tenant: Tenant | null;
+    timeEntries: TimeEntry[];
+    invoices: Invoice[];
+    deliverables: Deliverable[];
+  };
 
   if (!tenant) notFound();
 
@@ -187,10 +207,41 @@ export default async function ClienteDetalhePage({ params, searchParams }: Route
       )}
 
       {aba === "entregaveis" && (
-        <p className="text-sm text-neutral-500">
-          Módulo C1 (geração de entregáveis por IA) ainda não implementado — esta aba fica pronta pra quando ele
-          existir.
-        </p>
+        <div className="flex flex-col gap-4">
+          <div>
+            <GerarEntregavelModal tenantId={tenant.id} />
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+            {deliverables.length === 0 ? (
+              <p className="p-4 text-sm text-neutral-500">Nenhum entregável gerado ainda.</p>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-neutral-200 text-xs text-neutral-500 dark:border-neutral-800">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">Título</th>
+                    <th className="px-4 py-2 font-medium">Tipo</th>
+                    <th className="px-4 py-2 font-medium">Status</th>
+                    <th className="px-4 py-2 font-medium">Criado em</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deliverables.map((d) => (
+                    <tr key={d.id} className="border-b border-neutral-100 last:border-0 dark:border-neutral-900">
+                      <td className="px-4 py-3">
+                        <Link href={`/entregaveis/${d.id}`} className="underline">
+                          {d.titulo}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3">{LABELS_TIPO[d.tipo as TipoEntregavel] ?? d.tipo}</td>
+                      <td className="px-4 py-3">{DELIVERABLE_STATUS_LABEL[d.status] ?? d.status}</td>
+                      <td className="px-4 py-3">{new Date(d.createdAt).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -147,6 +147,7 @@ model Assessment {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   pipelineLeads PipelineLead[]
+  deliverables  Deliverable[]
 
   @@index([tenantId])
   @@map("assessments")
@@ -156,17 +157,43 @@ model Assessment {
 /// revisão humana obrigatória (spec seção 8.3): só a administradora, por ação
 /// explícita, move em_revisao → aprovado; só aprovado → enviado dispara envio real.
 model Deliverable {
-  id          String            @id @default(uuid())
-  tenantId    String            @map("tenant_id")
-  tenant      Tenant            @relation(fields: [tenantId], references: [id])
-  tipo        String
+  id       String @id @default(uuid())
+  tenantId String @map("tenant_id")
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  tipo  String
+  /// Título legível (ex.: "Descrição de cargo — Cozinheiro(a)"), composto a
+  /// partir do nome do template na criação — distingue múltiplos
+  /// entregáveis do mesmo tipo para o mesmo tenant na listagem.
+  titulo String
+
+  /// Referência à biblioteca de templates (spec C1.1, src/lib/entregaveis/templates.ts).
+  /// Não é FK de banco: a biblioteca é um array estático no código, não uma
+  /// tabela — versionar o template é uma mudança de código (PR), como o
+  /// motor de score do B1 (spec seção 6.1).
+  templateBaseId String @map("template_base_id")
+
+  /// Assessment de origem (spec C1.2.a: "usa as respostas de B1.1 para
+  /// personalizar o rascunho"). Nulo quando o entregável é criado sem
+  /// assessment associado (ex.: direto da página do cliente).
+  assessmentId String?     @map("assessment_id")
+  assessment   Assessment? @relation(fields: [assessmentId], references: [id])
+
   conteudo    String
   status      DeliverableStatus @default(rascunho)
   geradoPorIa Boolean           @default(false) @map("gerado_por_ia")
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  /// Capturado ao aprovar (spec C1.3.a): "quanto tempo você levaria para
+  /// produzir isso sem a IA?" — alimenta uma futura medição de horas
+  /// economizadas (C1.3.b) com dado real em vez de estimativa. Opcional:
+  /// a aprovação não pode ficar bloqueada por esse dado.
+  tempoManualEstimadoMinutos Int? @map("tempo_manual_estimado_minutos")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([tenantId])
+  @@index([assessmentId])
   @@map("deliverables")
 }
 

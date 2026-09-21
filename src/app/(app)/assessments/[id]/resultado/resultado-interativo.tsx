@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { GerarEntregavelModal } from "../../../entregaveis/gerar-entregavel-modal";
+
 /**
  * Seção "Recomendação comercial" + modal "Registrar decisão do cliente"
  * (spec seção 6.1). Pacote sugerido é uma SUGESTÃO do sistema num select
@@ -18,7 +20,13 @@ const PACOTES = ["Básico", "Premium", "Implantação"] as const;
 type Pacote = (typeof PACOTES)[number];
 type Decisao = "aceite" | "recusa" | "nao_agora";
 
-export function ResultadoInterativo({ assessmentId }: { assessmentId: string }) {
+export function ResultadoInterativo({
+  assessmentId,
+  tenantId,
+}: {
+  assessmentId: string;
+  tenantId: string;
+}) {
   const [pacoteSugerido, setPacoteSugerido] = useState<Pacote>("Básico");
   const [modalAberto, setModalAberto] = useState(false);
   const [decisao, setDecisao] = useState<Decisao | null>(null);
@@ -78,6 +86,8 @@ export function ResultadoInterativo({ assessmentId }: { assessmentId: string }) 
           >
             Registrar decisão do cliente
           </button>
+
+          <GerarEntregavelModal tenantId={tenantId} assessmentId={assessmentId} />
 
           <button
             type="button"

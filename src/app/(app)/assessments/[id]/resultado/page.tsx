@@ -67,7 +67,7 @@ export default async function ResultadoPage({
         </p>
       </section>
 
-      <ResultadoInterativo assessmentId={assessment.id} />
+      <ResultadoInterativo assessmentId={assessment.id} tenantId={assessment.tenantId} />
     </div>
   );
 }

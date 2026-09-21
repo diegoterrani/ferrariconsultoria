@@ -3,18 +3,28 @@
 Dashboard interno (RH Estratégico & DP Operacional) e portal de acompanhamento
 para clientes da Ferrari Consultoria.
 
-**Status atual: módulos B1 (Assessment/Diagnóstico) e B6 (Gestão de
-carteira) implementados e autenticados; C1 (IA generativa de
-entregáveis) ainda não.** A infraestrutura (deploy, banco, isolamento
-multi-tenant, CI/CD) já estava validada; a fase B1 implementou login
-(Auth.js, credenciais), wizard de 3 passos, scoring determinístico,
-página de resultado com recomendação comercial e o registro de decisão
-do cliente que alimenta o funil. A fase B6 implementou o layout
-autenticado com registro global de horas, capacidade semanal
-configurável, a carteira de clientes (lista + detalhe por abas), o
-painel de capacidade (gráfico de barras empilhadas), o Kanban comercial
-(drag-and-drop nativo, sem dependência nova) e a geração mensal de
-cobranças — os 5 telas da seção 6.2 da spec.
+**Status atual: os três módulos de Prioridade 1 do MVP (B1, B6, C1) estão
+implementados e autenticados — o PRD chama esse trio de "o único que de
+fato alivia o gargalo de capacidade da fundadora".** A infraestrutura
+(deploy, banco, isolamento multi-tenant, CI/CD) já estava validada; a
+fase B1 implementou login (Auth.js, credenciais), wizard de 3 passos,
+scoring determinístico, página de resultado com recomendação comercial
+e o registro de decisão do cliente que alimenta o funil. A fase B6
+implementou o layout autenticado com registro global de horas,
+capacidade semanal configurável, a carteira de clientes (lista +
+detalhe por abas), o painel de capacidade (gráfico de barras
+empilhadas), o Kanban comercial (drag-and-drop nativo, sem dependência
+nova) e a geração mensal de cobranças. A fase C1 implementou a geração
+assistida de entregáveis por IA (Anthropic/Claude) com biblioteca de
+templates, personalização a partir do assessment e a máquina de estados
+de revisão humana obrigatória.
+
+**O que ainda falta no MVP, honestamente:** o botão "Gerar relatório em
+PDF" da página de resultado do B1 continua desabilitado (geração de PDF
+não implementada); e `ANTHROPIC_API_KEY` precisa estar configurada no
+Vercel (Production e Preview) para o C1 funcionar de fato em produção —
+sem ela, a rota de geração responde 502 com um erro explícito, não falha
+silenciosa.
 
 Fonte da arquitetura e das decisões abaixo:
 `.board/phases/f3_escopo_mvp/especificacao_plataforma_dev.md` (spec técnica
@@ -26,10 +36,24 @@ consultivo do projeto.
 TypeScript ponta a ponta · Next.js 16 (App Router, Turbopack) · Prisma
 (`engineType = "client"`, driver adapters — sem binário nativo, alinhado ao
 runtime serverless do Vercel) · PostgreSQL via Supabase (Row-Level Security
-para isolamento multi-tenant) · Auth.js (credenciais + magic link) · Vitest +
+para isolamento multi-tenant) · Auth.js (credenciais + magic link) ·
+`@anthropic-ai/sdk` (módulo C1, atrás de `src/lib/ai-provider.ts`) · Vitest +
 Playwright · GitHub Actions.
 
 Racional de cada escolha: seção 2 da especificação técnica.
+
+**Desvio deliberado da seção 2 (documentado em `api/deliverables/route.ts`):**
+a spec recomenda uma fila de jobs assíncronos (Inngest ou BullMQ+Redis) para
+a geração de entregáveis por IA não bloquear a tela. Esta versão chama a IA
+de forma síncrona dentro da própria requisição HTTP — a UX exigida
+("estado de carregamento visível, nunca um spinner mudo") é alcançada com
+um `fetch` aguardado e um botão desabilitado, a geração fica dentro do
+limite de função serverless do Vercel, e a escala do MVP (1-3 clientes) não
+paga o custo operacional de mais um serviço (Redis) a manter — coerente com
+a restrição da seção 1 ("o que uma ou duas pessoas conseguem operar
+sozinhas"). Se o volume crescer a ponto do tempo de resposta virar
+problema, essa é a linha a trocar por um job assíncrono, não o produto
+inteiro.
 
 ## Rodando localmente
 
@@ -39,6 +63,13 @@ cp .env.example .env.local   # preencha DATABASE_URL com um Postgres real
 npx prisma generate
 npm run dev
 ```
+
+Para o módulo C1 (geração de entregáveis por IA) funcionar, `ANTHROPIC_API_KEY`
+precisa estar preenchida em `.env.local` (dev) e configurada como variável de
+ambiente no Vercel — Production e Preview — antes do primeiro uso em
+produção; sem ela, `POST /api/deliverables` responde 502 com um erro
+explícito (`src/lib/ai-provider.ts`), nunca falha silenciosa ou gera
+conteúdo vazio.
 
 `npx prisma generate` baixa o engine da Prisma de `binaries.prisma.sh`; se a
 rede estiver atrás de um proxy restritivo, isso falha — não falha no CI do
@@ -84,21 +115,24 @@ confirmar cobertura de RLS.
 
 - `prisma/schema.prisma` — as entidades-base da seção 5 da spec, os
   campos do fluxo B1 (`User.passwordHash`, `Assessment.updatedAt`,
-  `PipelineLead.decisao`/`motivoDecisao`/`pacoteSugerido`/`assessmentId`)
-  e o modelo `CapacitySettings` do B6 (singleton — linha única
-  `id = 'default'`, reforçado por `CHECK` no banco).
+  `PipelineLead.decisao`/`motivoDecisao`/`pacoteSugerido`/`assessmentId`),
+  o modelo `CapacitySettings` do B6 (singleton — linha única
+  `id = 'default'`, reforçado por `CHECK` no banco) e os campos do C1 em
+  `Deliverable` (`titulo`, `templateBaseId`, `assessmentId`,
+  `tempoManualEstimadoMinutos`).
 - `supabase/migrations/0001_multi_tenant_rls.sql` +
   `0002_rls_root_tables.sql` + `0003_b1_assessment_flow.sql` +
-  `0004_b6_carteira.sql` — isolamento por tenant (RLS), o schema do
-  fluxo B1 e o schema do B6; todas passaram pelo advisor de segurança do
-  Supabase sem achados novos. A 0004 também corrigiu um gap de RLS
-  pré-existente: as policies de 0001 só liberavam o bypass de tenant
-  para `role = 'admin'`, nunca para `'staff'`, apesar da spec (seção 3) e
-  do schema dizerem que staff tem "mesmo escopo de dados da
-  administradora" — staff autentica desde o B1, então isso silenciosamente
-  zerava os resultados de qualquer rota para um usuário staff (RLS
-  fail-safe, não vazamento, mas feature quebrada). Corrigido incluindo
-  `'staff'` no bypass de todas as tabelas afetadas.
+  `0004_b6_carteira.sql` + `0005_c1_entregaveis.sql` — isolamento por
+  tenant (RLS) e o schema dos três módulos de Prioridade 1; todas
+  passaram pelo advisor de segurança do Supabase sem achados novos. A
+  0004 também corrigiu um gap de RLS pré-existente: as policies de 0001
+  só liberavam o bypass de tenant para `role = 'admin'`, nunca para
+  `'staff'`, apesar da spec (seção 3) e do schema dizerem que staff tem
+  "mesmo escopo de dados da administradora" — staff autentica desde o
+  B1, então isso silenciosamente zerava os resultados de qualquer rota
+  para um usuário staff (RLS fail-safe, não vazamento, mas feature
+  quebrada). Corrigido incluindo `'staff'` no bypass de todas as tabelas
+  afetadas.
 - **Autenticação (Auth.js v5, credenciais)** — `src/lib/auth.ts`,
   `src/proxy.ts` (não `middleware.ts` — renomeado no Next 16, ver comentário
   no arquivo), `src/app/login/`. Só admin/staff autenticam nesta fatia; o
@@ -120,8 +154,8 @@ confirmar cobertura de RLS.
   (`registrar-horas-button.tsx`); `/carteira` (lista de clientes com
   horas do mês vs. horas contratadas, barra de progresso com limiares da
   spec); `/carteira/[id]` (detalhe por abas — dados, horas, faturamento,
-  entregáveis; a aba de entregáveis informa honestamente que o módulo C1
-  ainda não existe); `/carteira/capacidade` (gráfico de barras
+  entregáveis; a aba de entregáveis lista os entregáveis já gerados e dá
+  acesso ao "Gerar entregável" do C1); `/carteira/capacidade` (gráfico de barras
   empilhadas em SVG puro, sem biblioteca de gráficos, com linha
   tracejada de referência para a capacidade semanal configurável, que
   fica em `capacity_settings` — nunca hardcoded, spec seção 6.2);
@@ -137,6 +171,25 @@ confirmar cobertura de RLS.
   tenant um cliente de carteira de fato é o branch de "aceite" da rota
   `POST /api/pipeline-leads` (decisão do cliente no B1); há também um
   caminho de correção manual via `PATCH /api/tenants/[id]`.
+- **Módulo C1 completo (geração de entregáveis por IA)**: `src/lib/ai-provider.ts`
+  (camada de abstração da spec seção 2 — implementação real com
+  `@anthropic-ai/sdk`, model `claude-sonnet-5` configurável via
+  `ANTHROPIC_MODEL`; nunca aprova automaticamente, spec 8.3); `src/lib/entregaveis/templates.ts`
+  (biblioteca de templates da spec C1.1 — 9 templates entre descrição de
+  cargo, política interna e material de onboarding, gastronomia/hotelaria);
+  `gerar-entregavel-modal.tsx` (ponto de entrada compartilhado, usado em
+  `/carteira/[id]` e `/assessments/[id]/resultado`); `/entregaveis/[id]`
+  (editor — textarea de markdown em vez de WYSIWYG, mesmo racional de
+  "sem dependência nova sem necessidade real" do B6; barra de status fixa;
+  botão "Enviar ao cliente" desabilitado com tooltip até `aprovado`, spec
+  8.3); rota `POST /api/deliverables` (chama a IA de forma síncrona — ver
+  desvio de arquitetura documentado na seção Stack acima — e não grava
+  nada no banco se a geração falhar, sem rascunho órfão) e `PATCH /api/deliverables/[id]`
+  (máquina de estados `rascunho→em_revisao→aprovado→enviado`, tabela de
+  transições explícita, rejeita qualquer pulo de estado mesmo via chamada
+  direta à API). "Enviado" nesta versão é só o registro do estágio — envio
+  automático de fato depende do portal do cliente (módulo A1, fora do
+  MVP), mesmo princípio de honestidade de escopo do faturamento do B6.
 - `src/app/api/health` — health-check de deploy; reporta `service` (build no
   ar) e `database` (`SELECT 1` via `DATABASE_URL`) separadamente, fora de
   `withTenantContext` — não lê dado de tenant, só confirma que o Postgres do
@@ -153,27 +206,34 @@ confirmar cobertura de RLS.
   de ano, bucketing de semana ISO com segunda-feira como início,
   incluindo o caso de domingo voltar pra segunda anterior, não a
   seguinte), `tests/integration/assessments-api.test.ts` (as 4 rotas de
-  API do B1) e `tests/integration/carteira-api.test.ts` (as 8 rotas de
+  API do B1), `tests/integration/carteira-api.test.ts` (as 8 rotas de
   API do B6 — registro de horas, edição de tenant, capacidade,
   movimentação de card no pipeline, a ponte aceite→pacoteContratado
   testada nos dois sentidos, preview e geração idempotente de cobranças,
-  status manual). Ambos os arquivos de integração seguem o mesmo padrão:
-  401/403 sempre antes de tocar o banco, corpo inválido rejeitado, e o
-  contexto de tenant passado pra `withTenantContext` vem sempre da
-  sessão, nunca do corpo da requisição, mesmo quando o corpo tenta
-  injetar campos como `tenantId`/`estagio`/`decisao` — mockando
-  `@/lib/auth` e `@/lib/db`, não precisa de banco real. Dos 4 testes
-  obrigatórios da seção 9 da spec: #3 (scoring determinístico) está coberto
-  pelo teste unitário do motor de score; #1 (isolamento RLS) e #2 (máquina
-  de estados de deliverable, módulo C1) continuam `skip`/`todo` até
-  `DATABASE_URL_TEST` existir / o módulo C1 ser implementado — ver
-  comentário em cada arquivo, status honesto.
+  status manual) e `tests/integration/deliverable-state-machine.test.ts`
+  (as rotas de API do C1 — `@/lib/ai-provider` também mockado, nenhuma
+  chamada de rede real em teste; cobre as 3 transições sequenciais
+  válidas, cada pulo de estado possível rejeitado com 409, edição de
+  conteúdo permitida só antes de aprovado, e que nenhum `Deliverable` é
+  gravado quando a IA falha). Todos os arquivos de integração seguem o mesmo padrão: 401/403
+  sempre antes de tocar o banco, corpo inválido rejeitado, e o contexto
+  de tenant passado pra `withTenantContext` vem sempre da sessão, nunca
+  do corpo da requisição, mesmo quando o corpo tenta injetar campos como
+  `tenantId`/`estagio`/`decisao`/`status` — mockando `@/lib/auth` e
+  `@/lib/db`, não precisa de banco real. Dos 4 testes obrigatórios da
+  seção 9 da spec: #3 (scoring determinístico) está coberto pelo teste
+  unitário do motor de score; #2 (máquina de estados de deliverable) está
+  coberto por `deliverable-state-machine.test.ts`; #1 (isolamento RLS,
+  precisa de banco real) e #4 (E2E do Playwright, precisa do PDF do B1)
+  continuam pendentes — ver comentário em cada arquivo, status honesto.
 
 ## O que NÃO existe ainda (não é bug, é escopo)
 
-Módulo C1 (IA generativa de entregáveis, geração de PDF do resultado do
-B1), portal do cliente, Supabase Storage. Ver seção 6 da spec técnica
-para o desenho de cada tela antes de implementar.
+Geração de PDF do resultado do B1 (botão desabilitado na tela, spec seção
+6.1), portal do cliente (módulo A1-A3), Supabase Storage, e os módulos de
+Prioridade 2/3 do PRD (C2 — LGPD/operador de dados; B2-B5 — recrutamento,
+admissão, folha, gestão de desempenho). Ver seção 6 da spec técnica para
+o desenho de cada tela antes de implementar.
 
 ## Vulnerabilidade conhecida (dependência de desenvolvimento)
 
