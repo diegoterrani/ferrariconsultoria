@@ -148,7 +148,7 @@ export function Wizard() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-4 py-10">
+    <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-10">
       <BarraDeProgresso passoAtual={passoAtual} />
 
       <h1 className="text-xl font-semibold">Novo diagnóstico</h1>
@@ -195,7 +195,7 @@ export function Wizard() {
           </button>
         )}
       </div>
-    </main>
+    </div>
   );
 }
 

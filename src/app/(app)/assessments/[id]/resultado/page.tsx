@@ -32,12 +32,12 @@ export default async function ResultadoPage({
 
   if (assessment.status !== "concluido" || assessment.scoreExposicao === null) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-4 px-4 py-10">
+      <div className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-10">
         <h1 className="text-xl font-semibold">Diagnóstico ainda não calculado</h1>
         <p className="text-sm text-neutral-600 dark:text-neutral-400">
           Este diagnóstico está em rascunho. Volte ao wizard para concluir os 3 passos.
         </p>
-      </main>
+      </div>
     );
   }
 
@@ -47,7 +47,7 @@ export default async function ResultadoPage({
   const nivel = nivelAtencao(score);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-8 px-4 py-10">
+    <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-10">
       <div>
         <p className="text-sm text-neutral-500">{nomeEmpresa}</p>
         <h1 className="text-xl font-semibold">Resultado do diagnóstico</h1>
@@ -68,7 +68,7 @@ export default async function ResultadoPage({
       </section>
 
       <ResultadoInterativo assessmentId={assessment.id} />
-    </main>
+    </div>
   );
 }
 

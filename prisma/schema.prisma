@@ -252,6 +252,18 @@ model SensitiveRecord {
   @@map("sensitive_records")
 }
 
+/// Módulo B6 — capacidade semanal configurável (spec seção 6.2: "não deve
+/// ser hardcoded"). Singleton: id fixo 'default', reforçado por CHECK no
+/// banco (migration 0004) — nunca uma segunda linha. Sem tenantId: é
+/// configuração interna da consultoria, não dado de cliente.
+model CapacitySettings {
+  id             String   @id @default("default")
+  horasPorSemana Int      @default(10) @map("horas_por_semana")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("capacity_settings")
+}
+
 /// Toda leitura/edição/exportação de SensitiveRecord grava aqui sem exceção
 /// (spec seção 8.1) — é a evidência de conformidade, não uma tabela opcional.
 model AuditLog {

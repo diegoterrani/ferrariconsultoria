@@ -3,6 +3,7 @@ import * as z from "zod";
 
 import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/db";
+import { isPacoteValido } from "@/lib/carteira/pacotes";
 
 /**
  * POST /api/pipeline-leads — modal "Registrar decisão do cliente" na página
@@ -15,6 +16,15 @@ import { withTenantContext } from "@/lib/db";
  * colunas do Kanban tem significado de negócio e não é reordenável pelo
  * usuário (seção 6.2); mover automaticamente pra fechamento só no aceite
  * respeita essa mesma regra.
+ *
+ * Ponte B1→B6 (decisão de implementação, a spec não resolve isso
+ * explicitamente): "aceite" é o único evento de todo o sistema que faz um
+ * tenant virar cliente de carteira de verdade — por isso é aqui, e só
+ * aqui, que `tenants.pacoteContratado` é gravado, a partir do pacote
+ * sugerido no momento do aceite. Sem isso, nenhum tenant jamais teria
+ * pacote, e o painel /carteira nunca teria dado pra mostrar. Fica editável
+ * depois em /carteira/[id] (PATCH /api/tenants/[id]) — isto aqui é só o
+ * valor inicial no fechamento.
  */
 const DecisaoSchema = z.object({
   assessmentId: z.uuid(),
@@ -47,6 +57,13 @@ export async function POST(request: Request) {
 
     const estagio = decisao === "aceite" ? "fechamento" : "diagnostico";
     const existente = await tx.pipelineLead.findFirst({ where: { assessmentId } });
+
+    if (decisao === "aceite" && isPacoteValido(pacoteSugerido ?? null)) {
+      await tx.tenant.update({
+        where: { id: assessment.tenantId },
+        data: { pacoteContratado: pacoteSugerido },
+      });
+    }
 
     if (existente) {
       return tx.pipelineLead.update({
