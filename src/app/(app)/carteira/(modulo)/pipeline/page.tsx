@@ -20,13 +20,13 @@ export default async function PipelinePage() {
 
   const leads = (await withTenantContext(ctx, (tx) =>
     tx.pipelineLead.findMany({
-      include: { tenant: { select: { razaoSocial: true } } },
+      include: { tenant: { select: { id: true, razaoSocial: true } } },
       orderBy: { updatedAt: "desc" },
     }),
   )) as LeadCard[];
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-10">
+    <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold">Pipeline</h1>
       <KanbanBoard leadsIniciais={leads} />
     </div>

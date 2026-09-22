@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { botaoPrimario, botaoSecundario, campoInput, cartao, modalOverlay, modalPainel, rotuloCampo, textoErro, textoSucesso } from "@/lib/ui/classes";
@@ -96,7 +97,11 @@ export function ResultadoInterativo({
 
         {salvo && (
           <p className={textoSucesso}>
-            Decisão registrada — o funil comercial (carteira) foi atualizado.
+            Decisão registrada —{" "}
+            <Link href="/carteira/pipeline" className="underline">
+              ver no funil comercial (Pipeline)
+            </Link>
+            .
           </p>
         )}
       </section>

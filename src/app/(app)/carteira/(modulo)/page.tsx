@@ -6,13 +6,16 @@ import { withTenantContext } from "@/lib/db";
 import { PACOTES, isPacoteValido } from "@/lib/carteira/pacotes";
 import { inicioFimMesCorrente } from "@/lib/carteira/periodo";
 import { tabelaCabecalho, tabelaContainer, tabelaLinha, textoSecundario } from "@/lib/ui/classes";
+import { NovoClienteModal } from "@/components/carteira/novo-cliente-modal";
 
 /**
- * /carteira — tabela de clientes ativos (spec seção 6.2): nome, pacote,
- * horas consumidas/contratadas no mês (barra de progresso, amarela >80%,
- * vermelha >100%), status. Só admin/staff acessa (client_owner não tem
- * módulos do Grupo B — spec seção 3), então esta é uma checagem de defesa
- * em profundidade, igual ao layout do grupo (app).
+ * /carteira — aba "Clientes" do módulo Carteira (spec seção 6.2): nome,
+ * pacote, horas consumidas/contratadas no mês (barra de progresso, amarela
+ * >80%, vermelha >100%), status. Só admin/staff acessa (client_owner não
+ * tem módulos do Grupo B — spec seção 3), então esta é uma checagem de
+ * defesa em profundidade, igual ao layout do grupo (app) e ao layout deste
+ * módulo (`(modulo)/layout.tsx`, que também já traz a barra de abas
+ * persistente — largura/padding da página vêm de lá agora, não daqui).
  */
 export default async function CarteiraPage() {
   const session = await auth();
@@ -51,24 +54,20 @@ export default async function CarteiraPage() {
   );
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-10">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Carteira</h1>
-        <nav className="flex gap-4 text-sm">
-          <Link href="/carteira/capacidade" className="text-wine hover:underline">
-            Capacidade
-          </Link>
-          <Link href="/carteira/pipeline" className="text-wine hover:underline">
-            Pipeline
-          </Link>
-          <Link href="/carteira/faturamento" className="text-wine hover:underline">
-            Faturamento
-          </Link>
-        </nav>
+        <h1 className="text-xl font-semibold">Clientes</h1>
+        <NovoClienteModal />
       </div>
 
       {tenants.length === 0 ? (
-        <p className={textoSecundario}>Nenhum cliente cadastrado ainda.</p>
+        <p className={textoSecundario}>
+          Nenhum cliente cadastrado ainda. Cadastre manualmente com &quot;+ Novo cliente&quot; ou rode um{" "}
+          <Link href="/assessments/novo" className="underline">
+            novo diagnóstico
+          </Link>
+          .
+        </p>
       ) : (
         <div className={tabelaContainer}>
           <table className="w-full text-left text-sm">

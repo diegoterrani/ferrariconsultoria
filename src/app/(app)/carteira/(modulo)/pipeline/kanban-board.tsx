@@ -12,7 +12,7 @@ export type LeadCard = {
   decisao: "aceite" | "recusa" | "nao_agora" | null;
   motivoDecisao: string | null;
   pacoteSugerido: string | null;
-  tenant: { razaoSocial: string } | null;
+  tenant: { id: string; razaoSocial: string } | null;
 };
 
 const COLUNAS = [
@@ -135,17 +135,22 @@ export function KanbanBoard({ leadsIniciais }: { leadsIniciais: LeadCard[] }) {
               <p className="text-sm text-ink-soft">{selecionado.motivoDecisao}</p>
             )}
 
-            <div className="mt-2 flex justify-between">
-              {selecionado.assessmentId ? (
-                <Link
-                  href={`/assessments/${selecionado.assessmentId}/resultado`}
-                  className="text-sm text-wine underline"
-                >
-                  Ver diagnóstico
-                </Link>
-              ) : (
-                <span />
-              )}
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <div className="flex gap-3">
+                {selecionado.tenant && (
+                  <Link href={`/carteira/${selecionado.tenant.id}`} className="text-sm text-wine underline">
+                    Ver cliente
+                  </Link>
+                )}
+                {selecionado.assessmentId && (
+                  <Link
+                    href={`/assessments/${selecionado.assessmentId}/resultado`}
+                    className="text-sm text-wine underline"
+                  >
+                    Ver diagnóstico
+                  </Link>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setSelecionado(null)}

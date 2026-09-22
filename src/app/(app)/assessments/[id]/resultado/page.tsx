@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
@@ -47,7 +48,9 @@ export default async function ResultadoPage({
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-10">
       <div>
-        <p className={textoSecundario}>{nomeEmpresa}</p>
+        <Link href={`/carteira/${assessment.tenantId}`} className="text-xs text-ink-soft hover:underline">
+          ← {nomeEmpresa}
+        </Link>
         <h1 className="text-xl font-semibold">Resultado do diagnóstico</h1>
       </div>
 

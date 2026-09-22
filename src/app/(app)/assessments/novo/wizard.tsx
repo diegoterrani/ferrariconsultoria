@@ -17,6 +17,14 @@ import { Passo1Schema, Passo2Schema, Passo3Schema } from "@/lib/validation/asses
  * Não cobre nesta fatia: editar o passo 1 depois de já ter avançado (o
  * fluxo real é ao vivo, na frente do cliente, sequencial) — documentado
  * como corte de escopo, não bug.
+ *
+ * Props opcionais (auditoria de UX, set/2026) retomam um rascunho existente
+ * — o próprio comentário de `GET /api/assessments/[id]/route.ts` já previa
+ * isto ("carrega o assessment... pra retomar o wizard"), só nunca tinha
+ * sido ligado a uma tela. Retomada sempre começa no passo 2 ou 3, nunca no
+ * 1: qualquer rascunho persistido já tem o passo 1 salvo (é o que cria o
+ * registro), então reabrir o passo 1 cairia exatamente no corte de escopo
+ * documentado acima — sem sentido oferecer isso na tela de retomada.
  */
 
 type Step1 = {
@@ -77,13 +85,20 @@ function step3Valido(s: Step3) {
   return Passo3Schema.safeParse(s).success;
 }
 
-export function Wizard() {
+type RetomarProps = {
+  assessmentIdInicial?: string;
+  passoInicial?: 2 | 3;
+  step1Inicial?: Step1;
+  step2Inicial?: Step2;
+};
+
+export function Wizard({ assessmentIdInicial, passoInicial, step1Inicial, step2Inicial }: RetomarProps = {}) {
   const router = useRouter();
-  const [passoAtual, setPassoAtual] = useState<1 | 2 | 3>(1);
-  const [step1, setStep1] = useState<Step1>(STEP1_INICIAL);
-  const [step2, setStep2] = useState<Step2>(STEP2_INICIAL);
+  const [passoAtual, setPassoAtual] = useState<1 | 2 | 3>(passoInicial ?? 1);
+  const [step1, setStep1] = useState<Step1>(step1Inicial ?? STEP1_INICIAL);
+  const [step2, setStep2] = useState<Step2>(step2Inicial ?? STEP2_INICIAL);
   const [step3, setStep3] = useState<Step3>(STEP3_INICIAL);
-  const [assessmentId, setAssessmentId] = useState<string | null>(null);
+  const [assessmentId, setAssessmentId] = useState<string | null>(assessmentIdInicial ?? null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -152,7 +167,9 @@ export function Wizard() {
     <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-10">
       <BarraDeProgresso passoAtual={passoAtual} />
 
-      <h1 className="text-xl font-semibold">Novo diagnóstico</h1>
+      <h1 className="text-xl font-semibold">
+        {assessmentIdInicial ? `Continuar diagnóstico — ${step1.razaoSocial}` : "Novo diagnóstico"}
+      </h1>
 
       {passoAtual === 1 && <PassoDadosCadastrais valor={step1} onChange={setStep1} />}
       {passoAtual === 2 && <PassoMapeamentoDeDores valor={step2} onChange={setStep2} />}

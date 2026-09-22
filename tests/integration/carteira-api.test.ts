@@ -93,6 +93,75 @@ describe("POST /api/time-entries", () => {
   });
 });
 
+describe("POST /api/tenants — cadastro manual de cliente (auditoria de UX, set/2026)", () => {
+  const CLIENTE_VALIDO = {
+    razaoSocial: "Restaurante Bom Sabor Ltda",
+    cnpj: "11.222.333/0001-81", // dígito verificador válido — mesmo CNPJ de teste usado em cnpj.test.ts
+    porte: "pequeno",
+    segmento: "restaurante",
+  };
+
+  it("401/403 antes de tocar o banco", async () => {
+    sessionAs(null);
+    const { POST } = await import("@/app/api/tenants/route");
+    expect((await POST(jsonRequest(CLIENTE_VALIDO))).status).toBe(401);
+    expect(withTenantContextMock).not.toHaveBeenCalled();
+
+    sessionAs(CLIENT_OWNER);
+    expect((await POST(jsonRequest(CLIENTE_VALIDO))).status).toBe(403);
+    expect(withTenantContextMock).not.toHaveBeenCalled();
+  });
+
+  it("400 para CNPJ com dígito verificador inválido — não toca o banco", async () => {
+    sessionAs(ADMIN);
+    const { POST } = await import("@/app/api/tenants/route");
+    const res = await POST(jsonRequest({ ...CLIENTE_VALIDO, cnpj: "11.111.111/1111-11" }));
+    expect(res.status).toBe(400);
+    expect(withTenantContextMock).not.toHaveBeenCalled();
+  });
+
+  it("400 para porte/segmento fora do enum", async () => {
+    sessionAs(ADMIN);
+    const { POST } = await import("@/app/api/tenants/route");
+    const res = await POST(jsonRequest({ ...CLIENTE_VALIDO, porte: "gigante" }));
+    expect(res.status).toBe(400);
+  });
+
+  it("409 quando já existe cliente com o mesmo CNPJ — não chama tenant.create", async () => {
+    sessionAs(ADMIN);
+    const createMock = vi.fn();
+    withTenantContextMock.mockImplementation(async (_ctx, fn) =>
+      fn({ tenant: { findUnique: vi.fn().mockResolvedValue({ id: "t-existente" }), create: createMock } }),
+    );
+    const { POST } = await import("@/app/api/tenants/route");
+    const res = await POST(jsonRequest(CLIENTE_VALIDO));
+    expect(res.status).toBe(409);
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it("201, grava CNPJ sem máscara e não aceita pacoteContratado/status no corpo (saem do default do schema)", async () => {
+    sessionAs(ADMIN);
+    const createMock = vi.fn().mockImplementation(({ data }) => ({ id: "t-novo", ...data }));
+    withTenantContextMock.mockImplementation(async (ctx, fn) => {
+      expect(ctx).toEqual({ role: "admin", tenantId: null });
+      return fn({ tenant: { findUnique: vi.fn().mockResolvedValue(null), create: createMock } });
+    });
+    const { POST } = await import("@/app/api/tenants/route");
+    const res = await POST(
+      jsonRequest({ ...CLIENTE_VALIDO, pacoteContratado: "Premium", status: "risco_churn" }), // tentando entrar por aqui
+    );
+    const corpo = await res.json();
+    expect(res.status).toBe(201);
+    expect(corpo.id).toBe("t-novo");
+    expect(createMock.mock.calls[0][0].data).toEqual({
+      razaoSocial: CLIENTE_VALIDO.razaoSocial,
+      cnpj: "11222333000181",
+      porte: "pequeno",
+      segmento: "restaurante",
+    });
+  });
+});
+
 describe("PATCH /api/tenants/[id]", () => {
   it("401/403 antes de tocar o banco", async () => {
     sessionAs(null);

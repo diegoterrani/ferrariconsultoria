@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
@@ -13,7 +14,7 @@ type InvoiceRow = {
   competencia: string;
   valor: unknown;
   status: string;
-  tenant: { razaoSocial: string };
+  tenant: { id: string; razaoSocial: string };
 };
 
 /**
@@ -31,13 +32,13 @@ export default async function FaturamentoPage() {
 
   const invoices = (await withTenantContext(ctx, (tx) =>
     tx.invoice.findMany({
-      include: { tenant: { select: { razaoSocial: true } } },
+      include: { tenant: { select: { id: true, razaoSocial: true } } },
       orderBy: [{ competencia: "desc" }],
     }),
   )) as InvoiceRow[];
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Faturamento</h1>
         <GerarCobrancasButton />
@@ -59,7 +60,11 @@ export default async function FaturamentoPage() {
             <tbody>
               {invoices.map((inv) => (
                 <tr key={inv.id} className={tabelaLinha}>
-                  <td className="px-4 py-3">{inv.tenant.razaoSocial}</td>
+                  <td className="px-4 py-3">
+                    <Link href={`/carteira/${inv.tenant.id}`} className="font-medium hover:underline">
+                      {inv.tenant.razaoSocial}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3">{inv.competencia}</td>
                   <td className="px-4 py-3">
                     {Number(inv.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
