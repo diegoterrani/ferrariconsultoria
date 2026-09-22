@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Ferrari Consultoria">
+  <!--
+    Favicon = ícone-arco isolado, tile vinho-noite + traço ouro-brilhante —
+    exatamente a combinação que o documento de marca (identidade_visual.html,
+    "Ícone / avatar") especifica pra este uso ("avatar circular pequeno e
+    ícone de aplicativo, onde a logomarca completa não cabe"). Path SVG
+    copiado literal do documento fonte, não redesenhado — é a "vetorização
+    em arquivo fonte editável" que o próprio documento pede como próximo
+    passo prático após aprovação.
+  -->
+  <rect width="100" height="100" rx="22" fill="#3A1414"/>
+  <path d="M36,90 L36,24 C44,13 60,11 73,18" fill="none" stroke="#D9B466" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M36,54 L59,50" fill="none" stroke="#D9B466" stroke-width="7" stroke-linecap="round"/>
+</svg>

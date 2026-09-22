@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { campoInputPequeno } from "@/lib/ui/classes";
+
 const OPCOES = [
   { value: "pendente", label: "Pendente" },
   { value: "pago", label: "Pago" },
@@ -33,7 +35,7 @@ export function StatusSelect({ invoiceId, statusAtual }: { invoiceId: string; st
       value={statusAtual}
       disabled={salvando}
       onChange={(e) => alterar(e.target.value)}
-      className="rounded-md border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-900"
+      className={campoInputPequeno}
     >
       {OPCOES.map((o) => (
         <option key={o.value} value={o.value}>

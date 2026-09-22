@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { LABELS_TIPO, templatesPorTipo, type TipoEntregavel } from "@/lib/entregaveis/templates";
+import { botaoPrimario, botaoSecundario, campoInput, modalOverlay, modalPainel, rotuloCampo, textoErro } from "@/lib/ui/classes";
 
 const TIPOS = Object.keys(LABELS_TIPO) as TipoEntregavel[];
 
@@ -67,7 +68,7 @@ export function GerarEntregavelModal({
       <button
         type="button"
         onClick={abrir}
-        className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+        className={botaoPrimario}
       >
         Gerar entregável
       </button>
@@ -76,21 +77,21 @@ export function GerarEntregavelModal({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-4"
+          className={modalOverlay}
         >
-          <div className="flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-neutral-900">
-            <h2 className="text-base font-semibold">Gerar entregável</h2>
+          <div className={`${modalPainel} max-w-sm`}>
+            <h2 className="text-base font-semibold text-ink">Gerar entregável</h2>
 
             {gerando ? (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+              <p className="text-sm text-ink-soft">
                 Gerando rascunho com IA — isso pode levar até 30 segundos.
               </p>
             ) : (
               <>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Tipo</label>
+                  <label className={rotuloCampo}>Tipo</label>
                   <select
-                    className="rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                    className={campoInput}
                     value={tipo}
                     onChange={(e) => {
                       setTipo(e.target.value as TipoEntregavel);
@@ -107,11 +108,11 @@ export function GerarEntregavelModal({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                  <label className={rotuloCampo}>
                     Template-base
                   </label>
                   <select
-                    className="rounded-md border border-neutral-300 px-3 py-2 text-sm disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-900"
+                    className={`${campoInput} disabled:opacity-40`}
                     value={templateBaseId}
                     onChange={(e) => setTemplateBaseId(e.target.value)}
                     disabled={!tipo}
@@ -127,14 +128,14 @@ export function GerarEntregavelModal({
               </>
             )}
 
-            {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}
+            {erro && <p className={textoErro}>{erro}</p>}
 
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setAberto(false)}
                 disabled={gerando}
-                className="rounded-md border border-neutral-300 px-4 py-2 text-sm disabled:opacity-40 dark:border-neutral-700"
+                className={botaoSecundario}
               >
                 Cancelar
               </button>
@@ -142,7 +143,7 @@ export function GerarEntregavelModal({
                 type="button"
                 onClick={gerar}
                 disabled={!tipo || !templateBaseId || gerando}
-                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+                className={botaoPrimario}
               >
                 {gerando ? "Gerando..." : "Gerar"}
               </button>

@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/db";
 import { PACOTES, isPacoteValido } from "@/lib/carteira/pacotes";
 import { inicioFimMesCorrente } from "@/lib/carteira/periodo";
+import { tabelaCabecalho, tabelaContainer, tabelaLinha, textoSecundario } from "@/lib/ui/classes";
 
 /**
  * /carteira — tabela de clientes ativos (spec seção 6.2): nome, pacote,
@@ -54,24 +55,24 @@ export default async function CarteiraPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Carteira</h1>
         <nav className="flex gap-4 text-sm">
-          <Link href="/carteira/capacidade" className="hover:underline">
+          <Link href="/carteira/capacidade" className="text-wine hover:underline">
             Capacidade
           </Link>
-          <Link href="/carteira/pipeline" className="hover:underline">
+          <Link href="/carteira/pipeline" className="text-wine hover:underline">
             Pipeline
           </Link>
-          <Link href="/carteira/faturamento" className="hover:underline">
+          <Link href="/carteira/faturamento" className="text-wine hover:underline">
             Faturamento
           </Link>
         </nav>
       </div>
 
       {tenants.length === 0 ? (
-        <p className="text-sm text-neutral-500">Nenhum cliente cadastrado ainda.</p>
+        <p className={textoSecundario}>Nenhum cliente cadastrado ainda.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+        <div className={tabelaContainer}>
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-neutral-200 text-xs text-neutral-500 dark:border-neutral-800">
+            <thead className={tabelaCabecalho}>
               <tr>
                 <th className="px-4 py-2 font-medium">Cliente</th>
                 <th className="px-4 py-2 font-medium">Pacote</th>
@@ -87,13 +88,13 @@ export default async function CarteiraPage() {
                 const horasContratadas = pacote ? PACOTES[pacote].horasIncluidas : null;
 
                 return (
-                  <tr key={tenant.id} className="border-b border-neutral-100 last:border-0 dark:border-neutral-900">
+                  <tr key={tenant.id} className={tabelaLinha}>
                     <td className="px-4 py-3">
                       <Link href={`/carteira/${tenant.id}`} className="font-medium hover:underline">
                         {tenant.razaoSocial}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">
+                    <td className="px-4 py-3 text-ink-soft">
                       {tenant.pacoteContratado ?? "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -122,7 +123,7 @@ function BarraDeHoras({
 }) {
   if (horasContratadas === null) {
     return (
-      <span className="text-xs text-neutral-500">
+      <span className="text-xs text-ink-soft">
         {horasConsumidas.toFixed(1)}h — sem horas mensais contratadas
       </span>
     );
@@ -130,15 +131,16 @@ function BarraDeHoras({
 
   const percentual = (horasConsumidas / horasContratadas) * 100;
   // Limiares da própria spec (seção 6.2): amarelo acima de 80%, vermelho
-  // acima de 100%.
-  const cor = percentual > 100 ? "bg-red-500" : percentual > 80 ? "bg-amber-500" : "bg-neutral-900 dark:bg-white";
+  // acima de 100% — cores semânticas da identidade visual (ouro/alerta),
+  // nunca decorativas (mesma regra aplicada ao StatusBadge abaixo).
+  const cor = percentual > 100 ? "bg-danger" : percentual > 80 ? "bg-gold" : "bg-wine-deep";
 
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-xs text-neutral-600 dark:text-neutral-400">
+      <span className="text-xs text-ink-soft">
         {horasConsumidas.toFixed(1)}h / {horasContratadas}h
       </span>
-      <div className="h-1.5 w-32 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
+      <div className="h-1.5 w-32 overflow-hidden rounded-full bg-surface-2">
         <div className={`h-full ${cor}`} style={{ width: `${Math.min(percentual, 100)}%` }} />
       </div>
     </div>
@@ -154,10 +156,10 @@ const STATUS_LABEL: Record<string, string> = {
 function StatusBadge({ status }: { status: string }) {
   const cor =
     status === "ativo"
-      ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+      ? "bg-sage/15 text-sage"
       : status === "risco_churn"
-        ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
-        : "bg-neutral-100 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-400";
+        ? "bg-gold/15 text-gold"
+        : "bg-surface-2 text-ink-soft";
 
   return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cor}`}>{STATUS_LABEL[status] ?? status}</span>;
 }

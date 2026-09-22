@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { botaoPrimario, botaoSecundario, campoInput, cartao, modalOverlay, modalPainel, rotuloCampo, textoErro, textoSucesso } from "@/lib/ui/classes";
+
 import { GerarEntregavelModal } from "../../../entregaveis/gerar-entregavel-modal";
 import { RelatorioPdfModal } from "./relatorio-modal";
 
@@ -57,13 +59,13 @@ export function ResultadoInterativo({
 
   return (
     <>
-      <section className="flex flex-col gap-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+      <section className={`${cartao} flex flex-col gap-4 p-4`}>
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <label className={rotuloCampo}>
             Pacote sugerido
           </label>
           <select
-            className="rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+            className={campoInput}
             value={pacoteSugerido}
             onChange={(e) => setPacoteSugerido(e.target.value as Pacote)}
           >
@@ -73,7 +75,7 @@ export function ResultadoInterativo({
               </option>
             ))}
           </select>
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-ink-soft">
             Sugestão do sistema — a decisão final é sua, sempre editável antes de registrar.
           </p>
         </div>
@@ -82,7 +84,7 @@ export function ResultadoInterativo({
           <button
             type="button"
             onClick={() => setModalAberto(true)}
-            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+            className={botaoPrimario}
           >
             Registrar decisão do cliente
           </button>
@@ -93,7 +95,7 @@ export function ResultadoInterativo({
         </div>
 
         {salvo && (
-          <p className="text-sm text-green-700 dark:text-green-400">
+          <p className={textoSucesso}>
             Decisão registrada — o funil comercial (carteira) foi atualizado.
           </p>
         )}
@@ -103,10 +105,10 @@ export function ResultadoInterativo({
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-4"
+          className={modalOverlay}
         >
-          <div className="flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-neutral-900">
-            <h2 className="text-base font-semibold">Registrar decisão do cliente</h2>
+          <div className={`${modalPainel} max-w-sm`}>
+            <h2 className="text-base font-semibold text-ink">Registrar decisão do cliente</h2>
 
             <div className="flex flex-col gap-1.5">
               {(
@@ -129,23 +131,23 @@ export function ResultadoInterativo({
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <label className={rotuloCampo}>
                 Motivo
               </label>
               <textarea
-                className="rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                className={campoInput}
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
               />
             </div>
 
-            {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}
+            {erro && <p className={textoErro}>{erro}</p>}
 
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setModalAberto(false)}
-                className="rounded-md border border-neutral-300 px-4 py-2 text-sm dark:border-neutral-700"
+                className={botaoSecundario}
               >
                 Cancelar
               </button>
@@ -153,7 +155,7 @@ export function ResultadoInterativo({
                 type="button"
                 onClick={registrarDecisao}
                 disabled={!decisao || salvando}
-                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+                className={botaoPrimario}
               >
                 {salvando ? "Salvando..." : "Salvar"}
               </button>

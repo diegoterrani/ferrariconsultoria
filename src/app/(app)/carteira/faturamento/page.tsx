@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/db";
 
+import { tabelaCabecalho, tabelaContainer, tabelaLinha, textoSecundario } from "@/lib/ui/classes";
+
 import { GerarCobrancasButton } from "./gerar-cobrancas-button";
 import { StatusSelect } from "./status-select";
 
@@ -42,11 +44,11 @@ export default async function FaturamentoPage() {
       </div>
 
       {invoices.length === 0 ? (
-        <p className="text-sm text-neutral-500">Nenhuma cobrança registrada ainda.</p>
+        <p className={textoSecundario}>Nenhuma cobrança registrada ainda.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+        <div className={tabelaContainer}>
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-neutral-200 text-xs text-neutral-500 dark:border-neutral-800">
+            <thead className={tabelaCabecalho}>
               <tr>
                 <th className="px-4 py-2 font-medium">Cliente</th>
                 <th className="px-4 py-2 font-medium">Competência</th>
@@ -56,7 +58,7 @@ export default async function FaturamentoPage() {
             </thead>
             <tbody>
               {invoices.map((inv) => (
-                <tr key={inv.id} className="border-b border-neutral-100 last:border-0 dark:border-neutral-900">
+                <tr key={inv.id} className={tabelaLinha}>
                   <td className="px-4 py-3">{inv.tenant.razaoSocial}</td>
                   <td className="px-4 py-3">{inv.competencia}</td>
                   <td className="px-4 py-3">

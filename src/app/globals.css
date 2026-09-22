@@ -1,24 +1,86 @@
 @import "tailwindcss";
 
+/**
+ * Tokens da identidade visual Ferrari Consultoria (fase f3_escopo_mvp,
+ * .board/phases/f3_escopo_mvp/identidade_visual.html, v2 — aprovada por
+ * Eliane, portada para a plataforma em 22/09/2026). Nomes e valores
+ * espelham 1:1 os `:root`/`@media (prefers-color-scheme: dark)` do
+ * documento de marca original — mesma fonte de verdade, mesmos nomes de
+ * variável, para qualquer ajuste futuro de marca só precisar mudar aqui.
+ *
+ * Como no documento original: os tokens (não as classes Tailwind) trocam
+ * de valor sob `prefers-color-scheme: dark`. Isso substitui o padrão
+ * anterior de duplicar toda classe com um par `dark:` (ex.:
+ * `border-neutral-200 dark:border-neutral-800`) — a mesma classe
+ * (`border-line`) já lê o valor certo em cada modo, porque a variável CSS
+ * por trás dela é que muda. Menos duplicação em ~20 arquivos, uma única
+ * fonte de verdade por cor.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --bg: #F3ECE1;
+  --surface: #FFFCF7;
+  --surface-2: #EAE0D0;
+  --ink: #271815;
+  --ink-soft: #5B4A43;
+  --wine: #7A2E2E;
+  --wine-deep: #3A1414;
+  --gold: #A87A2A;
+  --gold-bright: #C9A24B;
+  --sage: #5F7350;
+  --danger: #A83232;
+  --line: rgba(39, 24, 21, 0.14);
+  /* Texto sobre fundo vinho/vinho-noite (selo, sidebar, botão primário) —
+     constante única, não troca com o modo: tanto `--wine-deep` claro
+     (#3A1414) quanto escuro (#2A0F0F) já são escuros o bastante para este
+     tom claro continuar legível nos dois modos (mesmo tratamento do cover
+     do documento de marca). */
+  --on-brand: #F3E4CE;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #1B1210;
+    --surface: #241816;
+    --surface-2: #2E211D;
+    --ink: #F3E9DD;
+    --ink-soft: #C9B7AC;
+    --wine: #C97A78;
+    --wine-deep: #2A0F0F;
+    --gold: #D9B466;
+    --gold-bright: #E8C77E;
+    --sage: #8FA57C;
+    --danger: #D97A7A;
+    --line: rgba(243, 233, 221, 0.14);
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-wine: var(--wine);
+  --color-wine-deep: var(--wine-deep);
+  --color-gold: var(--gold);
+  --color-gold-bright: var(--gold-bright);
+  --color-sage: var(--sage);
+  --color-danger: var(--danger);
+  --color-line: var(--line);
+  --color-on-brand: var(--on-brand);
+
+  /* Fontes carregadas via next/font/google em src/app/layout.tsx (self-
+     hosted no build — sem requisição a fonts.gstatic.com em runtime,
+     diferente do <link> do documento de marca original, que era só uma
+     maquete estática em HTML). As variáveis --font-* abaixo são as que o
+     next/font injeta. */
+  --font-serif: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-source-sans), -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-plex-mono), "SF Mono", Consolas, monospace;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
 }

@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/db";
 import { LABELS_TIPO, type TipoEntregavel } from "@/lib/entregaveis/templates";
+import { textoSecundario } from "@/lib/ui/classes";
 
 import { EditorEntregavel } from "./editor-entregavel";
 
@@ -40,11 +41,11 @@ export default async function EntregavelPage({ params }: { params: Promise<{ id:
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10">
       <div>
-        <Link href={`/carteira/${deliverable.tenant.id}?aba=entregaveis`} className="text-xs text-neutral-500 hover:underline">
+        <Link href={`/carteira/${deliverable.tenant.id}?aba=entregaveis`} className="text-xs text-ink-soft hover:underline">
           ← {deliverable.tenant.razaoSocial}
         </Link>
-        <h1 className="text-xl font-semibold">{deliverable.titulo}</h1>
-        <p className="text-sm text-neutral-500">{LABELS_TIPO[deliverable.tipo as TipoEntregavel] ?? deliverable.tipo}</p>
+        <h1 className="text-xl font-semibold text-ink">{deliverable.titulo}</h1>
+        <p className={textoSecundario}>{LABELS_TIPO[deliverable.tipo as TipoEntregavel] ?? deliverable.tipo}</p>
       </div>
 
       <EditorEntregavel id={deliverable.id} conteudoInicial={deliverable.conteudo} status={deliverable.status} />

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { botaoSecundarioPequeno, modalOverlay, modalPainel, textoErro } from "@/lib/ui/classes";
+
 export type LeadCard = {
   id: string;
   estagio: "contato" | "reuniao" | "diagnostico" | "fechamento";
@@ -58,7 +60,7 @@ export function KanbanBoard({ leadsIniciais }: { leadsIniciais: LeadCard[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}
+      {erro && <p className={textoErro}>{erro}</p>}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {COLUNAS.map((coluna) => {
@@ -73,9 +75,9 @@ export function KanbanBoard({ leadsIniciais }: { leadsIniciais: LeadCard[] }) {
                 if (leadId) void moverPara(leadId, coluna.valor);
                 setArrastando(null);
               }}
-              className="flex flex-col gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50"
+              className="flex flex-col gap-2 rounded-lg border border-line bg-surface-2 p-3"
             >
-              <h2 className="text-xs font-semibold text-neutral-500">
+              <h2 className="text-xs font-semibold text-ink-soft">
                 {coluna.rotulo} <span className="font-normal">({cards.length})</span>
               </h2>
 
@@ -90,13 +92,13 @@ export function KanbanBoard({ leadsIniciais }: { leadsIniciais: LeadCard[] }) {
                   }}
                   onDragEnd={() => setArrastando(null)}
                   onClick={() => setSelecionado(lead)}
-                  className={`flex flex-col gap-1 rounded-md border border-neutral-200 bg-white p-3 text-left text-sm shadow-sm dark:border-neutral-700 dark:bg-neutral-900 ${
+                  className={`flex flex-col gap-1 rounded-md border border-line bg-surface p-3 text-left text-sm shadow-sm ${
                     arrastando === lead.id ? "opacity-40" : ""
                   }`}
                 >
                   <span className="font-medium">{lead.tenant?.razaoSocial ?? "Sem cliente"}</span>
                   {lead.decisao && (
-                    <span className="text-xs text-neutral-500">
+                    <span className="text-xs text-ink-soft">
                       {DECISAO_LABEL[lead.decisao]}
                       {lead.pacoteSugerido ? ` · ${lead.pacoteSugerido}` : ""}
                     </span>
@@ -112,15 +114,15 @@ export function KanbanBoard({ leadsIniciais }: { leadsIniciais: LeadCard[] }) {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4"
+          className={modalOverlay}
           onClick={() => setSelecionado(null)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="flex w-full max-w-sm flex-col gap-2 rounded-lg bg-white p-6 dark:bg-neutral-900"
+            className={`${modalPainel} max-w-sm gap-2`}
           >
-            <h2 className="text-base font-semibold">{selecionado.tenant?.razaoSocial ?? "Sem cliente"}</h2>
-            <p className="text-xs text-neutral-500">
+            <h2 className="text-base font-semibold text-ink">{selecionado.tenant?.razaoSocial ?? "Sem cliente"}</h2>
+            <p className="text-xs text-ink-soft">
               Estágio: {COLUNAS.find((c) => c.valor === selecionado.estagio)?.rotulo}
             </p>
             {selecionado.decisao && (
@@ -130,14 +132,14 @@ export function KanbanBoard({ leadsIniciais }: { leadsIniciais: LeadCard[] }) {
             )}
             {selecionado.pacoteSugerido && <p className="text-sm">Pacote sugerido: {selecionado.pacoteSugerido}</p>}
             {selecionado.motivoDecisao && (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">{selecionado.motivoDecisao}</p>
+              <p className="text-sm text-ink-soft">{selecionado.motivoDecisao}</p>
             )}
 
             <div className="mt-2 flex justify-between">
               {selecionado.assessmentId ? (
                 <Link
                   href={`/assessments/${selecionado.assessmentId}/resultado`}
-                  className="text-sm text-neutral-900 underline dark:text-white"
+                  className="text-sm text-wine underline"
                 >
                   Ver diagnóstico
                 </Link>
@@ -147,7 +149,7 @@ export function KanbanBoard({ leadsIniciais }: { leadsIniciais: LeadCard[] }) {
               <button
                 type="button"
                 onClick={() => setSelecionado(null)}
-                className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700"
+                className={botaoSecundarioPequeno}
               >
                 Fechar
               </button>

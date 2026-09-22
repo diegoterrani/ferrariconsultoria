@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 
 import { auth, signOut } from "@/lib/auth";
 import { withTenantContext } from "@/lib/db";
+import { Logomark } from "@/components/brand/logomark";
 
+import { NavLinks } from "./nav-links";
 import { RegistrarHorasButton } from "./registrar-horas-button";
 
 /**
@@ -18,6 +20,21 @@ import { RegistrarHorasButton } from "./registrar-horas-button";
  * principal — `src/proxy.ts` já redireciona não-autenticado pra /login
  * antes da rota renderizar; este redirect cobre o caso de o proxy mudar de
  * matcher no futuro e alguém esquecer de re-proteger uma rota nova.
+ *
+ * Cabeçalho aplicando a identidade visual (fase f3_escopo_mvp,
+ * identidade_visual.html, aprovada por Eliane, 22/09/2026): fundo
+ * vinho-noite + logomarca — a mesma combinação do mockup "Cabeçalho do
+ * dashboard (plataforma)" do próprio documento de marca, que já
+ * referenciava os módulos B1/B6/C1 nominalmente. Decisão de escopo:
+ * o documento de marca desenha esse mockup como uma sidebar vertical; aqui
+ * ele foi traduzido para o cabeçalho horizontal já existente, mantendo a
+ * mesma paleta/tipografia/hierarquia (vinho-noite + ouro de destaque), em
+ * vez de reestruturar a navegação de toda a plataforma para layout de
+ * sidebar — a cor e a tipografia são a identidade; a forma do contêiner de
+ * navegação é um detalhe de implementação que o documento não fixa como
+ * requisito, e manter o cabeçalho horizontal existente evita reabrir todo o
+ * layout responsivo (já testado) de ~20 páginas por uma mudança que não foi
+ * pedida.
  */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -39,36 +56,34 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
-        <nav className="flex items-center gap-4 text-sm font-medium">
-          <Link href="/" className="text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100">
-            Plataforma Ferrari
+      <header className="flex flex-wrap items-center justify-between gap-3 bg-wine-deep px-4 py-3">
+        <div className="flex flex-wrap items-center gap-4">
+          <Link href="/" aria-label="Início — Plataforma Ferrari">
+            <Logomark size="sm" />
           </Link>
-          <Link href="/assessments/novo" className="hover:underline">
-            Diagnóstico
-          </Link>
-          <Link href="/carteira" className="hover:underline">
-            Carteira
-          </Link>
-        </nav>
+          <NavLinks />
+        </div>
 
         <div className="flex items-center gap-3">
           <RegistrarHorasButton tenants={tenants} />
-          <span className="text-xs text-neutral-500">{session.user.email}</span>
+          <span className="text-xs text-on-brand/70">{session.user.email}</span>
           <form
             action={async () => {
               "use server";
               await signOut({ redirectTo: "/login" });
             }}
           >
-            <button type="submit" className="text-xs text-neutral-500 hover:underline">
+            <button
+              type="submit"
+              className="rounded-md border border-white/25 px-3 py-1.5 text-xs text-on-brand transition-colors hover:bg-white/10"
+            >
               Sair
             </button>
           </form>
         </div>
       </header>
 
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 bg-bg">{children}</main>
     </div>
   );
 }

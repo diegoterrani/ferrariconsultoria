@@ -51,6 +51,10 @@ para isolamento multi-tenant) · Auth.js (credenciais + magic link) ·
 `pdfkit` (geração do PDF de resultado, atrás de `src/lib/relatorio/relatorio-pdf.ts`)
 · Vitest + Playwright · GitHub Actions.
 
+`next/font/local` com arquivos `.woff2` vendorizados em `src/app/fonts/`
+(Fraunces, Source Sans 3, IBM Plex Mono — ver seção "Identidade visual"
+abaixo).
+
 Racional de cada escolha: seção 2 da especificação técnica.
 `pdfkit` é a exceção fora da seção 2 (o documento não previa geração de PDF
 como dependência): desenha o PDF programaticamente, sem navegador headless
@@ -71,6 +75,55 @@ a restrição da seção 1 ("o que uma ou duas pessoas conseguem operar
 sozinhas"). Se o volume crescer a ponto do tempo de resposta virar
 problema, essa é a linha a trocar por um job assíncrono, não o produto
 inteiro.
+
+## Identidade visual
+
+A partir de 22/09/2026, a plataforma usa a identidade visual da marca —
+fonte: `.board/phases/f3_escopo_mvp/identidade_visual.html` (fase
+f3_escopo_mvp, v2, aprovada por Eliane). Antes disso, toda a UI usava
+cinza/preto neutro genérico do Tailwind.
+
+- **Tokens**: `src/app/globals.css` — cores e fontes como variáveis CSS
+  (`--wine`, `--gold`, `--sage`, `--danger`, `--ink`, etc.), mapeadas pro
+  Tailwind via `@theme inline`. As variáveis (não as classes) trocam de
+  valor sob `prefers-color-scheme: dark` — uma classe (`bg-surface`,
+  `border-line`) funciona nos dois modos sozinha, sem duplicar `dark:` em
+  cada arquivo.
+- **Cor semântica por nível de atenção**: `src/lib/apresentacao/cor-nivel-atencao.ts`
+  — fonte única pro selo da tela de resultado (web) e pro relatório em PDF,
+  que antes tinham cada um sua própria constante de verde/âmbar/vermelho
+  genérico duplicada.
+- **Componentes de marca**: `src/components/brand/logomark.tsx` — `Logomark`
+  (selo completo) e `LogoIcon` (ícone-arco isolado), deliberadamente
+  separados: a regra de uso do documento de marca é que os dois nunca
+  aparecem colados. `src/app/icon.svg` é o favicon real, vetorizado a
+  partir do path SVG do próprio documento.
+- **Classes compartilhadas**: `src/lib/ui/classes.ts` — botão, campo,
+  cartão, modal, tabela. Existem porque antes desta mudança a mesma string
+  de classes Tailwind se repetia dezenas de vezes por ~20 arquivos; agora
+  há um lugar só pra mudar.
+- **Fontes**: Fraunces (serifa, wordmark/títulos), Source Sans 3 (corpo/UI),
+  IBM Plex Mono (dados) — self-hosted via `next/font/local` com arquivos
+  `.woff2` vendorizados em `src/app/fonts/` (~184KB). Não é
+  `next/font/google`: essa opção baixa os arquivos do Google *durante* `next
+  build`, e esse acesso de rede é bloqueado pelo proxy do sandbox de
+  desenvolvimento (confirmado com `curl`, mesma categoria de restrição já
+  documentada abaixo para os binários do Prisma) — self-hostar os arquivos
+  elimina essa dependência de rede no build por completo, em vez de só
+  confiar que o ambiente de build de produção vai alcançar
+  `fonts.googleapis.com` na hora certa.
+- **Decisão de escopo — cabeçalho, não sidebar**: o documento de marca
+  desenha o mockup "Cabeçalho do dashboard" como uma sidebar vertical
+  vinho-noite. O cabeçalho horizontal existente (`src/app/(app)/layout.tsx`)
+  foi reskinado com a mesma paleta/tipografia/hierarquia em vez de
+  reestruturado em sidebar — a cor e a tipografia são a identidade; a forma
+  do contêiner de navegação não é um requisito fixado pelo documento, e
+  manter a estrutura horizontal evitou reabrir o layout responsivo de ~20
+  páginas por uma mudança de forma que não foi pedida.
+- **Fora de escopo desta mudança**: o PDF (`relatorio-pdf.ts`) usa as cores
+  da marca, mas continua com a fonte padrão do pdfkit (Helvetica) — trocar
+  para Fraunces/Source Sans exigiria embutir os arquivos de fonte no PDF,
+  uma mudança maior que não foi pedida junto com o reskin visual.
 
 ## Rodando localmente
 

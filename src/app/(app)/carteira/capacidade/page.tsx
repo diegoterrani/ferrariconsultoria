@@ -3,14 +3,18 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/db";
 import { ultimasNSemanas, rotuloSemana } from "@/lib/carteira/semanas";
+import { textoSecundario } from "@/lib/ui/classes";
 
 import { EditarCapacidade } from "./editar-capacidade";
 
 const JANELA_SEMANAS = 8;
 // Paleta cíclica pra empilhar por cliente — sem lib de gráfico nova (spec
 // não pede uma; um SVG inline resolve um gráfico de barras empilhadas
-// simples sem mais uma dependência pra manter).
-const CORES = ["#171717", "#525252", "#a3a3a3", "#f59e0b", "#0ea5e9", "#10b981", "#ef4444", "#8b5cf6"];
+// simples sem mais uma dependência pra manter). Cores derivadas da
+// identidade visual da marca (vinho/ouro/sálvia + variantes) em vez do
+// arco-íris genérico anterior — ainda categórica o bastante pra distinguir
+// vários clientes ao mesmo tempo, mas dentro da paleta aprovada.
+const CORES = ["#7A2E2E", "#A87A2A", "#5F7350", "#3A1414", "#C9A24B", "#8FA57C", "#A83232", "#5B4A43"];
 
 type TimeEntryRow = { tenantId: string; duracaoMinutos: number; data: Date };
 type TenantRow = { id: string; razaoSocial: string };
@@ -89,7 +93,7 @@ export default async function CapacidadePage() {
         <EditarCapacidade horasAtual={horasPorSemana} />
       </div>
 
-      <p className="text-sm text-neutral-500">
+      <p className={textoSecundario}>
         Horas comprometidas por cliente, semana a semana, contra a linha de capacidade disponível ({horasPorSemana}
         h/semana).
       </p>
@@ -206,11 +210,11 @@ function GraficoCapacidade({
         x2={largura - 10}
         y1={y(horasPorSemana)}
         y2={y(horasPorSemana)}
-        stroke="#ef4444"
+        style={{ stroke: "var(--danger)" }}
         strokeWidth={1.5}
         strokeDasharray="4 3"
       />
-      <text x={largura - 10} y={y(horasPorSemana) - 4} fontSize={10} textAnchor="end" fill="#ef4444">
+      <text x={largura - 10} y={y(horasPorSemana) - 4} fontSize={10} textAnchor="end" style={{ fill: "var(--danger)" }}>
         capacidade: {horasPorSemana}h
       </text>
     </svg>

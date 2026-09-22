@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { PACOTES } from "@/lib/carteira/pacotes";
+import { botaoPrimario, campoInput, cartao, rotuloCampo, textoErro } from "@/lib/ui/classes";
 
 const STATUS_OPCOES = [
   { value: "ativo", label: "Ativo" },
@@ -51,16 +52,16 @@ export function EditarPacote({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+    <div className={`${cartao} flex flex-col gap-4 p-4`}>
       <div className="flex flex-col gap-1">
-        <label htmlFor="ep-pacote" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+        <label htmlFor="ep-pacote" className={rotuloCampo}>
           Pacote contratado
         </label>
         <select
           id="ep-pacote"
           value={pacote}
           onChange={(e) => setPacote(e.target.value)}
-          className="rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+          className={campoInput}
         >
           <option value="">Nenhum</option>
           {Object.keys(PACOTES).map((nome) => (
@@ -72,14 +73,14 @@ export function EditarPacote({
       </div>
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="ep-status" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+        <label htmlFor="ep-status" className={rotuloCampo}>
           Status
         </label>
         <select
           id="ep-status"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+          className={campoInput}
         >
           {STATUS_OPCOES.map((s) => (
             <option key={s.value} value={s.value}>
@@ -89,13 +90,13 @@ export function EditarPacote({
         </select>
       </div>
 
-      {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}
+      {erro && <p className={textoErro}>{erro}</p>}
 
       <button
         type="button"
         onClick={salvar}
         disabled={salvando}
-        className="self-start rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+        className={`self-start ${botaoPrimario}`}
       >
         {salvando ? "Salvando..." : "Salvar"}
       </button>

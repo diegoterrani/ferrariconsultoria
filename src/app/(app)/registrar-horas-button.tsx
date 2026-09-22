@@ -2,6 +2,8 @@
 
 import { useId, useState } from "react";
 
+import { botaoPrimario, botaoPrimarioSobreVinhoPequeno, botaoSecundario, campoInput, modalOverlay, modalPainel, rotuloCampo, textoErro } from "@/lib/ui/classes";
+
 /**
  * Botão global "+ Registrar horas" (spec seção 6.2) — modal com 4 campos:
  * cliente (busca por nome via <datalist>, sem lib nova), atividade, duração
@@ -80,7 +82,7 @@ export function RegistrarHorasButton({ tenants }: { tenants: TenantOption[] }) {
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white dark:bg-white dark:text-neutral-900"
+        className={botaoPrimarioSobreVinhoPequeno}
       >
         + Registrar horas
       </button>
@@ -89,13 +91,13 @@ export function RegistrarHorasButton({ tenants }: { tenants: TenantOption[] }) {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4"
+          className={modalOverlay}
         >
-          <div className="flex w-full max-w-sm flex-col gap-3 rounded-lg bg-white p-6 dark:bg-neutral-900">
+          <div className={`${modalPainel} max-w-sm gap-3`}>
             <h2 className="text-base font-semibold">Registrar horas</h2>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="th-cliente" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <label htmlFor="th-cliente" className={rotuloCampo}>
                 Cliente
               </label>
               <input
@@ -104,7 +106,7 @@ export function RegistrarHorasButton({ tenants }: { tenants: TenantOption[] }) {
                 value={clienteNome}
                 onChange={(e) => setClienteNome(e.target.value)}
                 placeholder="Buscar por nome..."
-                className="rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                className={campoInput}
               />
               <datalist id={datalistId}>
                 {tenants.map((t) => (
@@ -114,14 +116,14 @@ export function RegistrarHorasButton({ tenants }: { tenants: TenantOption[] }) {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="th-atividade" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <label htmlFor="th-atividade" className={rotuloCampo}>
                 Atividade
               </label>
               <select
                 id="th-atividade"
                 value={atividade}
                 onChange={(e) => setAtividade(e.target.value as typeof atividade)}
-                className="rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                className={campoInput}
               >
                 {ATIVIDADES.map((a) => (
                   <option key={a.value} value={a.value}>
@@ -133,7 +135,7 @@ export function RegistrarHorasButton({ tenants }: { tenants: TenantOption[] }) {
 
             <div className="flex gap-3">
               <div className="flex flex-1 flex-col gap-1">
-                <label htmlFor="th-horas" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                <label htmlFor="th-horas" className={rotuloCampo}>
                   Horas
                 </label>
                 <input
@@ -143,11 +145,11 @@ export function RegistrarHorasButton({ tenants }: { tenants: TenantOption[] }) {
                   max={23}
                   value={horas}
                   onChange={(e) => setHoras(e.target.value)}
-                  className="rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                  className={campoInput}
                 />
               </div>
               <div className="flex flex-1 flex-col gap-1">
-                <label htmlFor="th-minutos" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                <label htmlFor="th-minutos" className={rotuloCampo}>
                   Minutos
                 </label>
                 <input
@@ -157,13 +159,13 @@ export function RegistrarHorasButton({ tenants }: { tenants: TenantOption[] }) {
                   max={59}
                   value={minutos}
                   onChange={(e) => setMinutos(e.target.value)}
-                  className="rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                  className={campoInput}
                 />
               </div>
             </div>
 
             <div className="flex flex-col gap-1">
-              <label htmlFor="th-data" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <label htmlFor="th-data" className={rotuloCampo}>
                 Data
               </label>
               <input
@@ -171,17 +173,17 @@ export function RegistrarHorasButton({ tenants }: { tenants: TenantOption[] }) {
                 type="date"
                 value={data}
                 onChange={(e) => setData(e.target.value)}
-                className="rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                className={campoInput}
               />
             </div>
 
-            {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}
+            {erro && <p className={textoErro}>{erro}</p>}
 
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={fecharEResetar}
-                className="rounded-md border border-neutral-300 px-4 py-2 text-sm dark:border-neutral-700"
+                className={botaoSecundario}
               >
                 Cancelar
               </button>
@@ -189,7 +191,7 @@ export function RegistrarHorasButton({ tenants }: { tenants: TenantOption[] }) {
                 type="button"
                 onClick={salvar}
                 disabled={salvando}
-                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+                className={botaoPrimario}
               >
                 {salvando ? "Salvando..." : "Salvar"}
               </button>

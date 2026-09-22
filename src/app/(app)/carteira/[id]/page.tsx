@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/db";
 
 import { LABELS_TIPO, type TipoEntregavel } from "@/lib/entregaveis/templates";
+import { tabelaCabecalho, tabelaContainer, tabelaLinha, textoSecundario } from "@/lib/ui/classes";
 
 import { GerarEntregavelModal } from "../../entregaveis/gerar-entregavel-modal";
 import { EditarPacote } from "./editar-pacote";
@@ -100,22 +101,22 @@ export default async function ClienteDetalhePage({ params, searchParams }: Route
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-10">
       <div>
-        <Link href="/carteira" className="text-xs text-neutral-500 hover:underline">
+        <Link href="/carteira" className="text-xs text-ink-soft hover:underline">
           ← Carteira
         </Link>
-        <h1 className="text-xl font-semibold">{tenant.razaoSocial}</h1>
-        <p className="text-sm text-neutral-500">{tenant.cnpj}</p>
+        <h1 className="text-xl font-semibold text-ink">{tenant.razaoSocial}</h1>
+        <p className={textoSecundario}>{tenant.cnpj}</p>
       </div>
 
-      <nav className="flex gap-1 border-b border-neutral-200 text-sm dark:border-neutral-800">
+      <nav className="flex gap-1 border-b border-line text-sm">
         {ABAS.map((a) => (
           <Link
             key={a.valor}
             href={`/carteira/${id}?aba=${a.valor}`}
             className={`-mb-px border-b-2 px-3 py-2 ${
               aba === a.valor
-                ? "border-neutral-900 font-medium dark:border-white"
-                : "border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+                ? "border-wine-deep font-medium text-ink"
+                : "border-transparent text-ink-soft hover:text-ink"
             }`}
           >
             {a.rotulo}
@@ -127,11 +128,11 @@ export default async function ClienteDetalhePage({ params, searchParams }: Route
         <div className="flex flex-col gap-4">
           <dl className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <dt className="text-neutral-500">Porte</dt>
+              <dt className="text-ink-soft">Porte</dt>
               <dd className="capitalize">{tenant.porte}</dd>
             </div>
             <div>
-              <dt className="text-neutral-500">Segmento</dt>
+              <dt className="text-ink-soft">Segmento</dt>
               <dd className="capitalize">{tenant.segmento}</dd>
             </div>
           </dl>
@@ -140,12 +141,12 @@ export default async function ClienteDetalhePage({ params, searchParams }: Route
       )}
 
       {aba === "horas" && (
-        <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+        <div className={tabelaContainer}>
           {timeEntries.length === 0 ? (
-            <p className="p-4 text-sm text-neutral-500">Nenhum registro de horas ainda.</p>
+            <p className="p-4 text-sm text-ink-soft">Nenhum registro de horas ainda.</p>
           ) : (
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-neutral-200 text-xs text-neutral-500 dark:border-neutral-800">
+              <thead className={tabelaCabecalho}>
                 <tr>
                   <th className="px-4 py-2 font-medium">Data</th>
                   <th className="px-4 py-2 font-medium">Atividade</th>
@@ -154,7 +155,7 @@ export default async function ClienteDetalhePage({ params, searchParams }: Route
               </thead>
               <tbody>
                 {timeEntries.map((entry) => (
-                  <tr key={entry.id} className="border-b border-neutral-100 last:border-0 dark:border-neutral-900">
+                  <tr key={entry.id} className={tabelaLinha}>
                     <td className="px-4 py-2">{new Date(entry.data).toLocaleDateString("pt-BR", { timeZone: "UTC" })}</td>
                     <td className="px-4 py-2">{ATIVIDADE_LABEL[entry.atividade] ?? entry.atividade}</td>
                     <td className="px-4 py-2">
@@ -170,19 +171,19 @@ export default async function ClienteDetalhePage({ params, searchParams }: Route
 
       {aba === "faturamento" && (
         <div className="flex flex-col gap-3">
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-ink-soft">
             Gerar novas cobranças ou marcar como paga/atrasada acontece em{" "}
-            <Link href="/carteira/faturamento" className="underline">
+            <Link href="/carteira/faturamento" className="text-wine underline">
               Carteira → Faturamento
             </Link>
             .
           </p>
-          <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+          <div className={tabelaContainer}>
             {invoices.length === 0 ? (
-              <p className="p-4 text-sm text-neutral-500">Nenhuma cobrança registrada ainda.</p>
+              <p className="p-4 text-sm text-ink-soft">Nenhuma cobrança registrada ainda.</p>
             ) : (
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-neutral-200 text-xs text-neutral-500 dark:border-neutral-800">
+                <thead className={tabelaCabecalho}>
                   <tr>
                     <th className="px-4 py-2 font-medium">Competência</th>
                     <th className="px-4 py-2 font-medium">Valor</th>
@@ -191,7 +192,7 @@ export default async function ClienteDetalhePage({ params, searchParams }: Route
                 </thead>
                 <tbody>
                   {invoices.map((inv) => (
-                    <tr key={inv.id} className="border-b border-neutral-100 last:border-0 dark:border-neutral-900">
+                    <tr key={inv.id} className={tabelaLinha}>
                       <td className="px-4 py-2">{inv.competencia}</td>
                       <td className="px-4 py-2">
                         {Number(inv.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
@@ -211,12 +212,12 @@ export default async function ClienteDetalhePage({ params, searchParams }: Route
           <div>
             <GerarEntregavelModal tenantId={tenant.id} />
           </div>
-          <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+          <div className={tabelaContainer}>
             {deliverables.length === 0 ? (
-              <p className="p-4 text-sm text-neutral-500">Nenhum entregável gerado ainda.</p>
+              <p className="p-4 text-sm text-ink-soft">Nenhum entregável gerado ainda.</p>
             ) : (
               <table className="w-full text-left text-sm">
-                <thead className="border-b border-neutral-200 text-xs text-neutral-500 dark:border-neutral-800">
+                <thead className={tabelaCabecalho}>
                   <tr>
                     <th className="px-4 py-2 font-medium">Título</th>
                     <th className="px-4 py-2 font-medium">Tipo</th>
@@ -226,9 +227,9 @@ export default async function ClienteDetalhePage({ params, searchParams }: Route
                 </thead>
                 <tbody>
                   {deliverables.map((d) => (
-                    <tr key={d.id} className="border-b border-neutral-100 last:border-0 dark:border-neutral-900">
+                    <tr key={d.id} className={tabelaLinha}>
                       <td className="px-4 py-3">
-                        <Link href={`/entregaveis/${d.id}`} className="underline">
+                        <Link href={`/entregaveis/${d.id}`} className="text-wine underline">
                           {d.titulo}
                         </Link>
                       </td>

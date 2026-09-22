@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { botaoPrimario, botaoSecundario, campoInput, modalOverlay, modalPainel, rotuloCampo, textoErro, textoSucesso } from "@/lib/ui/classes";
+
 type Status = "rascunho" | "em_revisao" | "aprovado" | "enviado";
 
 const ESTAGIOS: { valor: Status; rotulo: string }[] = [
@@ -97,26 +99,24 @@ export function EditorEntregavel({
           <span key={e.valor} className="flex items-center gap-2">
             <span
               className={`rounded-full px-2.5 py-1 font-medium ${
-                e.valor === status
-                  ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                  : "bg-neutral-100 text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400"
+                e.valor === status ? "bg-wine-deep text-on-brand" : "bg-surface-2 text-ink-soft"
               }`}
             >
               {e.rotulo}
             </span>
-            {i < ESTAGIOS.length - 1 && <span className="text-neutral-300 dark:text-neutral-700">→</span>}
+            {i < ESTAGIOS.length - 1 && <span className="text-ink-soft/40">→</span>}
           </span>
         ))}
       </div>
 
       <textarea
-        className="min-h-[400px] rounded-md border border-neutral-300 px-3 py-2 font-mono text-sm disabled:bg-neutral-50 disabled:text-neutral-500 dark:border-neutral-700 dark:bg-neutral-900 dark:disabled:bg-neutral-950"
+        className={`min-h-[400px] font-mono disabled:bg-surface-2 disabled:text-ink-soft ${campoInput}`}
         value={conteudo}
         onChange={(e) => setConteudo(e.target.value)}
         disabled={!podeEditar || salvando}
       />
 
-      {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}
+      {erro && <p className={textoErro}>{erro}</p>}
 
       <div className="flex flex-wrap items-center gap-2">
         {podeEditar && (
@@ -124,7 +124,7 @@ export function EditorEntregavel({
             type="button"
             onClick={salvarConteudo}
             disabled={!conteudoMudou || salvando}
-            className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium disabled:opacity-40 dark:border-neutral-700"
+            className={botaoSecundario}
           >
             {salvando ? "Salvando..." : "Salvar conteúdo"}
           </button>
@@ -135,7 +135,7 @@ export function EditorEntregavel({
             type="button"
             onClick={iniciarRevisao}
             disabled={salvando}
-            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+            className={botaoPrimario}
           >
             Iniciar revisão
           </button>
@@ -146,7 +146,7 @@ export function EditorEntregavel({
             type="button"
             onClick={() => setModalAprovarAberto(true)}
             disabled={salvando}
-            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+            className={botaoPrimario}
           >
             Aprovar
           </button>
@@ -165,42 +165,42 @@ export function EditorEntregavel({
               ? "Disponível só depois que o entregável for aprovado — revisão humana é obrigatória antes do envio (spec 8.3)."
               : undefined
           }
-          className="cursor-not-allowed rounded-md border border-neutral-300 px-4 py-2 text-sm text-neutral-400 enabled:cursor-pointer enabled:border-transparent enabled:bg-neutral-900 enabled:text-white disabled:opacity-40 dark:border-neutral-700 dark:enabled:bg-white dark:enabled:text-neutral-900"
+          className="cursor-not-allowed rounded-md border border-line px-4 py-2 text-sm text-ink-soft/50 enabled:cursor-pointer enabled:border-transparent enabled:bg-wine-deep enabled:text-on-brand disabled:opacity-40"
         >
           Enviar ao cliente
         </button>
       </div>
 
       {status === "enviado" && (
-        <p className="text-sm text-green-700 dark:text-green-400">
+        <p className={textoSucesso}>
           Marcado como enviado — este registro é manual; o envio de fato (e-mail, download) acontece por fora do
           sistema nesta versão (portal do cliente é módulo A1, fora do MVP).
         </p>
       )}
 
       {modalAprovarAberto && (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 px-4">
-          <div className="flex w-full max-w-sm flex-col gap-4 rounded-lg bg-white p-6 dark:bg-neutral-900">
-            <h2 className="text-base font-semibold">Aprovar entregável</h2>
+        <div role="dialog" aria-modal="true" className={modalOverlay}>
+          <div className={`${modalPainel} max-w-sm`}>
+            <h2 className="text-base font-semibold text-ink">Aprovar entregável</h2>
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <label className={rotuloCampo}>
                 Quanto tempo você levaria para produzir isso sem a IA? (minutos, opcional)
               </label>
               <input
                 type="number"
                 min={0}
-                className="rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                className={campoInput}
                 value={minutosEconomizados}
                 onChange={(e) => setMinutosEconomizados(e.target.value)}
               />
             </div>
-            {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}
+            {erro && <p className={textoErro}>{erro}</p>}
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setModalAprovarAberto(false)}
                 disabled={salvando}
-                className="rounded-md border border-neutral-300 px-4 py-2 text-sm disabled:opacity-40 dark:border-neutral-700"
+                className={botaoSecundario}
               >
                 Cancelar
               </button>
@@ -208,7 +208,7 @@ export function EditorEntregavel({
                 type="button"
                 onClick={confirmarAprovacao}
                 disabled={salvando}
-                className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+                className={botaoPrimario}
               >
                 {salvando ? "Aprovando..." : "Confirmar aprovação"}
               </button>

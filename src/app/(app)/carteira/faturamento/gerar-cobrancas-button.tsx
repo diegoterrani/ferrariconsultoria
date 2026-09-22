@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { botaoPrimario, botaoPrimarioPequeno, botaoSecundario, modalOverlay, modalPainel, textoErro } from "@/lib/ui/classes";
+
 type Preview = { competencia: string; count: number; tenants: { id: string; razaoSocial: string; valor: number }[] };
 
 /**
@@ -54,40 +56,40 @@ export function GerarCobrancasButton() {
         type="button"
         onClick={abrirModal}
         disabled={carregando}
-        className="rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+        className={botaoPrimarioPequeno}
       >
         {carregando ? "Calculando..." : "Gerar cobranças do mês"}
       </button>
 
-      {erro && !preview && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{erro}</p>}
+      {erro && !preview && <p className={`mt-2 ${textoErro}`}>{erro}</p>}
 
       {preview && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4"
+          className={modalOverlay}
         >
-          <div className="flex w-full max-w-sm flex-col gap-3 rounded-lg bg-white p-6 dark:bg-neutral-900">
+          <div className={`${modalPainel} max-w-sm gap-3`}>
             <h2 className="text-base font-semibold">Gerar cobranças do mês</h2>
             {preview.count === 0 ? (
-              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+              <p className="text-sm text-ink-soft">
                 Nenhum cliente ativo com pacote contratado ainda sem cobrança em {preview.competencia}.
               </p>
             ) : (
-              <p className="text-sm text-neutral-700 dark:text-neutral-300">
+              <p className="text-sm text-ink">
                 Isso vai gerar <strong>{preview.count}</strong> {preview.count === 1 ? "cobrança" : "cobranças"} para{" "}
                 <strong>{preview.count}</strong> {preview.count === 1 ? "cliente ativo" : "clientes ativos"} em{" "}
                 {preview.competencia}. Confirmar?
               </p>
             )}
 
-            {erro && <p className="text-sm text-red-600 dark:text-red-400">{erro}</p>}
+            {erro && <p className={textoErro}>{erro}</p>}
 
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setPreview(null)}
-                className="rounded-md border border-neutral-300 px-4 py-2 text-sm dark:border-neutral-700"
+                className={botaoSecundario}
               >
                 Cancelar
               </button>
@@ -96,7 +98,7 @@ export function GerarCobrancasButton() {
                   type="button"
                   onClick={confirmar}
                   disabled={gerando}
-                  className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+                  className={botaoPrimario}
                 >
                   {gerando ? "Gerando..." : "Confirmar"}
                 </button>

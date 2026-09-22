@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 
+import { HEX_POR_NIVEL } from "@/lib/apresentacao/cor-nivel-atencao";
 import { nivelAtencao, textoNivelAtencao } from "@/lib/apresentacao/nivel-atencao";
 
 /**
@@ -49,12 +50,6 @@ function formatarCnpj(cnpj: string): string {
   return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
 }
 
-const COR_POR_NIVEL: Record<ReturnType<typeof nivelAtencao>, string> = {
-  baixo: "#16a34a",
-  moderado: "#d97706",
-  elevado: "#dc2626",
-};
-
 export function gerarRelatorioResultadoPdf(input: RelatorioResultadoInput): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 56 });
@@ -65,23 +60,32 @@ export function gerarRelatorioResultadoPdf(input: RelatorioResultadoInput): Prom
     doc.on("error", reject);
 
     const nivel = nivelAtencao(input.score);
-    const cor = COR_POR_NIVEL[nivel];
+    const cor = HEX_POR_NIVEL[nivel];
 
     doc
       .fontSize(18)
-      .fillColor("#111111")
+      .fillColor("#3A1414") // wine-deep — identidade visual
       .text("Diagnóstico de exposição trabalhista", { align: "left" })
       .moveDown(0.2)
       .fontSize(11)
-      .fillColor("#555555")
+      .fillColor("#5B4A43") // ink-soft — identidade visual
       .text(input.razaoSocial)
       .text(`CNPJ ${formatarCnpj(input.cnpj)}`)
       .text(`Gerado em ${input.geradoEm.toLocaleDateString("pt-BR")}`)
-      .moveDown(1.2);
+      .moveDown(0.6);
+
+    // Friso dourado sob o cabeçalho — mesmo elemento de marca do
+    // papel timbrado no documento de identidade visual ("lh-top... border-
+    // bottom: 2px solid var(--gold)"). Desenho vetorial simples via
+    // `doc.rect`, já disponível no pdfkit — nenhuma dependência nova.
+    doc
+      .rect(doc.page.margins.left, doc.y, doc.page.width - doc.page.margins.left - doc.page.margins.right, 2)
+      .fill("#A87A2A")
+      .moveDown(1.1);
 
     doc
       .fontSize(13)
-      .fillColor("#111111")
+      .fillColor("#3A1414") // wine-deep — identidade visual
       .text("Score de exposição", { underline: false })
       .moveDown(0.3);
 
@@ -90,7 +94,7 @@ export function gerarRelatorioResultadoPdf(input: RelatorioResultadoInput): Prom
       .fillColor(cor)
       .text(`${input.score}`, { continued: true })
       .fontSize(14)
-      .fillColor("#555555")
+      .fillColor("#5B4A43") // ink-soft — identidade visual
       .text(" / 100")
       .moveDown(0.4);
 
@@ -99,31 +103,31 @@ export function gerarRelatorioResultadoPdf(input: RelatorioResultadoInput): Prom
     // única fonte de verdade, nunca duplicado/reescrito aqui.
     doc
       .fontSize(11)
-      .fillColor("#333333")
+      .fillColor("#271815") // ink — identidade visual
       .text(textoNivelAtencao(input.score))
       .moveDown(1.2);
 
     doc
       .fontSize(13)
-      .fillColor("#111111")
+      .fillColor("#3A1414") // wine-deep — identidade visual
       .text("Benchmark do setor")
       .moveDown(0.3)
       .fontSize(11)
-      .fillColor("#333333")
+      .fillColor("#271815") // ink — identidade visual
       .text(`Rotatividade média do setor: ${input.benchmarkRotatividadeSetor}%/ano`)
       .moveDown(1.2);
 
     doc
       .fontSize(13)
-      .fillColor("#111111")
+      .fillColor("#3A1414") // wine-deep — identidade visual
       .text("Recomendação comercial")
       .moveDown(0.3)
       .fontSize(11)
-      .fillColor("#333333")
+      .fillColor("#271815") // ink — identidade visual
       .text(`Pacote sugerido: ${input.pacoteSugerido}`)
       .moveDown(0.2)
       .fontSize(9)
-      .fillColor("#777777")
+      .fillColor("#5B4A43") // ink-soft — identidade visual
       .text(
         "Sugestão do sistema — a decisão final é da administradora da Ferrari Consultoria, " +
           "sempre editável antes de ser registrada.",

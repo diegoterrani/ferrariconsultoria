@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { botaoPrimarioPequeno, campoInputPequeno, textoErro } from "@/lib/ui/classes";
+
 /**
  * Edição inline do valor de capacidade semanal (spec seção 6.2: "valor
  * configurável quando a fundadora migrar para dedicação full-time — não
@@ -36,7 +38,7 @@ export function EditarCapacidade({ horasAtual }: { horasAtual: number }) {
 
   if (!editando) {
     return (
-      <button type="button" onClick={() => setEditando(true)} className="text-xs text-neutral-500 hover:underline">
+      <button type="button" onClick={() => setEditando(true)} className="text-xs text-ink-soft hover:underline">
         Editar capacidade
       </button>
     );
@@ -50,21 +52,21 @@ export function EditarCapacidade({ horasAtual }: { horasAtual: number }) {
         max={168}
         value={valor}
         onChange={(e) => setValor(e.target.value)}
-        className="w-16 rounded-md border border-neutral-300 px-2 py-1 dark:border-neutral-700 dark:bg-neutral-900"
+        className={`w-16 ${campoInputPequeno}`}
       />
-      <span className="text-neutral-500">h/semana</span>
+      <span className="text-ink-soft">h/semana</span>
       <button
         type="button"
         onClick={salvar}
         disabled={salvando}
-        className="rounded-md bg-neutral-900 px-2 py-1 font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+        className={botaoPrimarioPequeno}
       >
         {salvando ? "..." : "Salvar"}
       </button>
-      <button type="button" onClick={() => setEditando(false)} className="text-neutral-500 hover:underline">
+      <button type="button" onClick={() => setEditando(false)} className="text-ink-soft hover:underline">
         Cancelar
       </button>
-      {erro && <span className="text-red-600 dark:text-red-400">{erro}</span>}
+      {erro && <span className={textoErro}>{erro}</span>}
     </div>
   );
 }

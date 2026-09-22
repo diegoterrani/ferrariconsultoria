@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 
 import { formatarCnpj } from "@/lib/cnpj";
+import { botaoPrimario, botaoSecundario, campoInput, rotuloCampo, textoErro } from "@/lib/ui/classes";
 import { Passo1Schema, Passo2Schema, Passo3Schema } from "@/lib/validation/assessment";
 
 /**
@@ -158,7 +159,7 @@ export function Wizard() {
       {passoAtual === 3 && <PassoJornadaEEscala valor={step3} onChange={setStep3} />}
 
       {erro && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className={textoErro}>
           {erro}
         </p>
       )}
@@ -168,7 +169,7 @@ export function Wizard() {
           type="button"
           onClick={() => setPassoAtual((p) => (p > 1 ? ((p - 1) as 1 | 2) : p))}
           disabled={passoAtual === 1 || salvando}
-          className="rounded-md border border-neutral-300 px-4 py-2 text-sm disabled:opacity-40 dark:border-neutral-700"
+          className={botaoSecundario}
         >
           Voltar
         </button>
@@ -180,7 +181,7 @@ export function Wizard() {
             disabled={
               salvando || (passoAtual === 1 ? !step1Valido(step1) : !step2Valido(step2))
             }
-            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+            className={botaoPrimario}
           >
             {salvando ? "Salvando..." : "Avançar"}
           </button>
@@ -189,7 +190,7 @@ export function Wizard() {
             type="button"
             onClick={calcularDiagnostico}
             disabled={salvando || !step3Valido(step3)}
-            className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+            className={botaoPrimario}
           >
             {salvando ? "Calculando..." : "Calcular diagnóstico"}
           </button>
@@ -202,7 +203,7 @@ export function Wizard() {
 function BarraDeProgresso({ passoAtual }: { passoAtual: 1 | 2 | 3 }) {
   const rotulos = ["Dados cadastrais", "Mapeamento de dores", "Jornada e escala"];
   return (
-    <div className="sticky top-0 z-10 -mx-4 bg-white/90 px-4 py-3 backdrop-blur dark:bg-neutral-950/90">
+    <div className="sticky top-0 z-10 -mx-4 bg-bg/90 px-4 py-3 backdrop-blur">
       <ol className="flex gap-2">
         {rotulos.map((rotulo, i) => {
           const numero = (i + 1) as 1 | 2 | 3;
@@ -212,10 +213,10 @@ function BarraDeProgresso({ passoAtual }: { passoAtual: 1 | 2 | 3 }) {
             <li key={rotulo} className="flex flex-1 flex-col gap-1">
               <div
                 className={`h-1.5 rounded-full ${
-                  ativo || concluido ? "bg-neutral-900 dark:bg-white" : "bg-neutral-200 dark:bg-neutral-800"
+                  ativo || concluido ? "bg-wine-deep" : "bg-surface-2"
                 }`}
               />
-              <span className="text-xs text-neutral-500">
+              <span className="text-xs text-ink-soft">
                 {numero}. {rotulo}
               </span>
             </li>
@@ -235,14 +236,13 @@ function BarraDeProgresso({ passoAtual }: { passoAtual: 1 | 2 | 3 }) {
 function Campo({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</span>
+      <span className={rotuloCampo}>{label}</span>
       {children}
     </label>
   );
 }
 
-const inputClasses =
-  "rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900";
+const inputClasses = campoInput;
 
 function PassoDadosCadastrais({
   valor,
@@ -313,7 +313,7 @@ function PassoDadosCadastrais({
                   onClick={() =>
                     onChange({ ...valor, unidades: valor.unidades.filter((_, j) => j !== i) })
                   }
-                  className="rounded-md border border-neutral-300 px-3 text-sm dark:border-neutral-700"
+                  className="rounded-md border border-line px-3 text-sm text-ink hover:bg-surface-2"
                   aria-label={`Remover unidade ${i + 1}`}
                 >
                   ×
@@ -324,7 +324,7 @@ function PassoDadosCadastrais({
           <button
             type="button"
             onClick={() => onChange({ ...valor, unidades: [...valor.unidades, ""] })}
-            className="self-start text-sm text-neutral-600 underline dark:text-neutral-400"
+            className="self-start text-sm text-ink-soft underline"
           >
             + adicionar unidade
           </button>
