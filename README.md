@@ -17,11 +17,11 @@ configurável, a carteira de clientes (lista + detalhe por abas), o painel
 de capacidade (gráfico de barras empilhadas), o Kanban comercial
 (drag-and-drop nativo, sem dependência nova) e a geração mensal de
 cobranças. A fase C1 implementou a geração assistida de entregáveis por IA
-(Anthropic/Claude) com biblioteca de templates, personalização a partir do
-assessment e a máquina de estados de revisão humana obrigatória.
+(Claude Sonnet 5, via OpenRouter) com biblioteca de templates, personalização
+a partir do assessment e a máquina de estados de revisão humana obrigatória.
 
 **O que ainda falta no MVP, honestamente:**
-- `ANTHROPIC_API_KEY` precisa estar configurada no Vercel (Production e
+- `OPENROUTER_API_KEY` precisa estar configurada no Vercel (Production e
   Preview) para o C1 funcionar de fato em produção — sem ela, a rota de
   geração responde 502 com um erro explícito, não falha silenciosa.
 - "Enviar ao cliente", a segunda opção do modal de PDF (spec seção 6.1),
@@ -47,7 +47,7 @@ TypeScript ponta a ponta · Next.js 16 (App Router, Turbopack) · Prisma
 (`engineType = "client"`, driver adapters — sem binário nativo, alinhado ao
 runtime serverless do Vercel) · PostgreSQL via Supabase (Row-Level Security
 para isolamento multi-tenant) · Auth.js (credenciais + magic link) ·
-`@anthropic-ai/sdk` (módulo C1, atrás de `src/lib/ai-provider.ts`) ·
+`openai` SDK, roteado via OpenRouter (módulo C1, atrás de `src/lib/ai-provider.ts`) ·
 `pdfkit` (geração do PDF de resultado, atrás de `src/lib/relatorio/relatorio-pdf.ts`)
 · Vitest + Playwright · GitHub Actions.
 
@@ -134,12 +134,15 @@ npx prisma generate
 npm run dev
 ```
 
-Para o módulo C1 (geração de entregáveis por IA) funcionar, `ANTHROPIC_API_KEY`
+Para o módulo C1 (geração de entregáveis por IA) funcionar, `OPENROUTER_API_KEY`
 precisa estar preenchida em `.env.local` (dev) e configurada como variável de
 ambiente no Vercel — Production e Preview — antes do primeiro uso em
 produção; sem ela, `POST /api/deliverables` responde 502 com um erro
 explícito (`src/lib/ai-provider.ts`), nunca falha silenciosa ou gera
-conteúdo vazio.
+conteúdo vazio. A chave é gerada em `openrouter.ai/settings/keys`; a
+plataforma chama o modelo `anthropic/claude-sonnet-5` (Claude Sonnet 5) via
+o endpoint compatível com a API de Chat Completions da OpenRouter, não a API
+nativa da Anthropic — troca de provedor registrada em `src/lib/ai-provider.ts`.
 
 `npx prisma generate` baixa o engine da Prisma de `binaries.prisma.sh`; se a
 rede estiver atrás de um proxy restritivo, isso falha — não falha no CI do
@@ -249,9 +252,10 @@ confirmar cobertura de RLS.
   `POST /api/pipeline-leads` (decisão do cliente no B1); há também um
   caminho de correção manual via `PATCH /api/tenants/[id]`.
 - **Módulo C1 completo (geração de entregáveis por IA)**: `src/lib/ai-provider.ts`
-  (camada de abstração da spec seção 2 — implementação real com
-  `@anthropic-ai/sdk`, model `claude-sonnet-5` configurável via
-  `ANTHROPIC_MODEL`; nunca aprova automaticamente, spec 8.3); `src/lib/entregaveis/templates.ts`
+  (camada de abstração da spec seção 2 — implementação real com o SDK
+  `openai` contra o endpoint compatível da OpenRouter, model
+  `anthropic/claude-sonnet-5` configurável via `OPENROUTER_MODEL`; nunca
+  aprova automaticamente, spec 8.3); `src/lib/entregaveis/templates.ts`
   (biblioteca de templates da spec C1.1 — 9 templates entre descrição de
   cargo, política interna e material de onboarding, gastronomia/hotelaria);
   `gerar-entregavel-modal.tsx` (ponto de entrada compartilhado, usado em

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * Testes de integração do módulo C1 (IA generativa de entregáveis) — mesmo
  * padrão de assessments-api.test.ts e carteira-api.test.ts: `@/lib/auth` e
  * `@/lib/db` mockados, sem precisar de banco real, mais `@/lib/ai-provider`
- * mockado (a chamada de rede à Anthropic não deve rodar em teste).
+ * mockado (a chamada de rede à OpenRouter não deve rodar em teste).
  *
  * Este arquivo fecha o teste obrigatório #2 (especificacao_plataforma_dev.md,
  * seção 9): "tentar transicionar de rascunho direto para enviado, pulando
@@ -104,7 +104,7 @@ describe("POST /api/deliverables (geração via IA)", () => {
         deliverable: { create: createMock },
       }),
     );
-    gerarEntregavelMock.mockRejectedValue(new Error("ANTHROPIC_API_KEY ausente"));
+    gerarEntregavelMock.mockRejectedValue(new Error("OPENROUTER_API_KEY ausente"));
     sessionAs(ADMIN);
     const { POST } = await import("@/app/api/deliverables/route");
     const res = await POST(

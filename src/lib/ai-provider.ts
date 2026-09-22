@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
 import { LABELS_TIPO } from "@/lib/entregaveis/templates";
 
@@ -8,14 +8,33 @@ import { LABELS_TIPO } from "@/lib/entregaveis/templates";
  * Fonte: especificacao_plataforma_dev.md, seção 2 — "a abstração própria
  * existe para não travar a plataforma a um único fornecedor — trocar de
  * provedor no futuro deve significar reescrever um arquivo, não o produto
- * inteiro." Nenhum outro módulo deve importar `@anthropic-ai/sdk`
- * diretamente — sempre via este arquivo.
+ * inteiro." Nenhum outro módulo deve importar o SDK de IA diretamente —
+ * sempre via este arquivo.
  *
- * Dependência: @anthropic-ai/sdk (^0.127.0). Justificativa: SDK oficial,
- * tipado, mantido pelo fornecedor da API já escolhida na spec (seção 2,
- * "qualidade de geração em português"); é a única dependência nova deste
- * módulo — não há alternativa sem SDK que não signifique reimplementar
- * chamada HTTP + streaming + tratamento de erro por conta própria.
+ * Provedor: OpenRouter, endpoint compatível com a API de Chat Completions
+ * da OpenAI (`https://openrouter.ai/api/v1`, confirmado em
+ * openrouter.ai/docs/quickstart). Modelo padrão `anthropic/claude-sonnet-5`
+ * — mesmo modelo da Anthropic usado antes, agora roteado via OpenRouter em
+ * vez da API nativa da Anthropic (troca decidida por já existir uma
+ * credencial OpenRouter disponível; ver histórico de decisão desta sessão).
+ *
+ * Por que trocar de SDK e não só de URL: a Anthropic Messages API
+ * (`@anthropic-ai/sdk`, `client.messages.create`) e a Chat Completions API
+ * da OpenAI (`client.chat.completions.create`) têm formatos de
+ * request/response incompatíveis (blocos de `content` vs. `choices[0]
+ * .message.content`; `usage.input_tokens` vs. `usage.prompt_tokens`). A
+ * OpenRouter documenta de forma estável e completa o endpoint compatível
+ * com a OpenAI (openrouter.ai/docs/api_reference) — o atalho
+ * `ANTHROPIC_BASE_URL=https://openrouter.ai/api` só é documentado para o
+ * runtime do Claude Code/Claude Agent SDK, não para uso direto do
+ * `@anthropic-ai/sdk` como este arquivo fazia; por isso a troca de
+ * dependência em vez de reaproveitar o SDK antigo com uma URL diferente.
+ *
+ * Dependência: `openai` (SDK oficial da OpenAI, mesmo padrão de qualidade
+ * do `@anthropic-ai/sdk` que substitui — tipado, mantido pelo fornecedor
+ * do formato de API usado). `@anthropic-ai/sdk` foi removido do
+ * package.json: nenhum outro módulo o importava (verificado antes desta
+ * mudança).
  */
 
 export interface GeracaoEntregavelInput {
@@ -89,23 +108,35 @@ function construirUserPrompt(input: GeracaoEntregavelInput): string {
 }
 
 /**
- * Cliente único e lazy: `new Anthropic()` valida a chave só na primeira
+ * Cliente único e lazy: `new OpenAI()` valida a chave só na primeira
  * chamada real, não no import do módulo — uma rota que importa este arquivo
  * sem nunca chamar `gerarEntregavel` (ex.: durante o build do Vercel) não
- * falha por falta de ANTHROPIC_API_KEY.
+ * falha por falta de OPENROUTER_API_KEY.
+ *
+ * `HTTP-Referer`/`X-OpenRouter-Title`: headers de atribuição documentados
+ * em openrouter.ai/docs/app-attribution — não afetam a chamada em si
+ * (a API funciona sem eles), só a exibição de uso/ranking no painel da
+ * OpenRouter. Incluídos porque são gratuitos e não têm efeito colateral.
  */
-let cliente: Anthropic | undefined;
+let cliente: OpenAI | undefined;
 
-function obterCliente(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+function obterCliente(): OpenAI {
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "ANTHROPIC_API_KEY ausente — necessária para o módulo C1 (geração de entregáveis). " +
+      "OPENROUTER_API_KEY ausente — necessária para o módulo C1 (geração de entregáveis, via OpenRouter). " +
         "Configurar como variável de ambiente no Vercel (Production e Preview) e em .env.local " +
         "para desenvolvimento; nunca commitar o valor. Ver .env.example.",
     );
   }
-  cliente ??= new Anthropic({ apiKey });
+  cliente ??= new OpenAI({
+    apiKey,
+    baseURL: "https://openrouter.ai/api/v1",
+    defaultHeaders: {
+      "HTTP-Referer": "https://ferrariconsultoria.com.br",
+      "X-OpenRouter-Title": "Plataforma Ferrari Consultoria",
+    },
+  });
   return cliente;
 }
 
@@ -114,24 +145,27 @@ export function createAiProvider(): AiProvider {
     async gerarEntregavel(input) {
       const client = obterCliente();
       // Configurável por env para trocar de modelo sem deploy de código
-      // (ex.: revisão de custo/qualidade) — claude-sonnet-5 é o padrão
-      // recomendado pela documentação da Anthropic para geração de texto
-      // em português com boa relação custo/qualidade.
-      const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5";
+      // (ex.: revisão de custo/qualidade) — anthropic/claude-sonnet-5 é o
+      // padrão: mesmo modelo usado antes da troca de provedor, no formato
+      // de slug exigido pela OpenRouter (confirmado em openrouter.ai/anthropic).
+      const model = process.env.OPENROUTER_MODEL ?? "anthropic/claude-sonnet-5";
 
       let resposta;
       try {
-        resposta = await client.messages.create({
+        resposta = await client.chat.completions.create({
           model,
           max_tokens: 4096,
-          system: construirSystemPrompt(),
-          messages: [{ role: "user", content: construirUserPrompt(input) }],
+          messages: [
+            { role: "system", content: construirSystemPrompt() },
+            { role: "user", content: construirUserPrompt(input) },
+          ],
         });
       } catch (erro) {
         // Nunca engolir o erro original — spec do usuário exige tratamento
         // de erro robusto e explicável, não um catch silencioso. Erros da
-        // API da Anthropic (rate limit, chave inválida, timeout) já vêm
-        // tipados pelo SDK; preservamos a causa para debug em produção.
+        // API (rate limit, chave inválida, timeout, modelo indisponível na
+        // OpenRouter) já vêm tipados pelo SDK; preservamos a causa para
+        // debug em produção.
         throw new Error(
           `Falha ao gerar entregável via IA (tipo=${input.tipo}, template=${input.templateBaseId}): ${
             erro instanceof Error ? erro.message : String(erro)
@@ -140,15 +174,11 @@ export function createAiProvider(): AiProvider {
         );
       }
 
-      const textoGerado = resposta.content
-        .filter((bloco): bloco is Anthropic.TextBlock => bloco.type === "text")
-        .map((bloco) => bloco.text)
-        .join("\n")
-        .trim();
+      const textoGerado = resposta.choices[0]?.message?.content?.trim() ?? "";
 
       if (!textoGerado) {
         throw new Error(
-          `IA retornou resposta sem conteúdo de texto (tipo=${input.tipo}, stop_reason=${resposta.stop_reason}).`,
+          `IA retornou resposta sem conteúdo de texto (tipo=${input.tipo}, finish_reason=${resposta.choices[0]?.finish_reason}).`,
         );
       }
 
@@ -156,13 +186,17 @@ export function createAiProvider(): AiProvider {
       // monitorado desde o dia 1 (é a única linha de custo variável por
       // cliente atendido)". Sem infra de observabilidade dedicada no MVP
       // (1-3 clientes); grep por "[ai-provider:uso]" nos logs do Vercel
-      // já cobre a necessidade real de monitorar custo nesta escala.
+      // já cobre a necessidade real de monitorar custo nesta escala. Chaves
+      // do log mantidas (inputTokens/outputTokens) para não quebrar
+      // qualquer busca/alerta já configurado sobre esses logs, mesmo com a
+      // troca de nome dos campos na resposta da API (prompt_tokens/
+      // completion_tokens, nomenclatura da Chat Completions).
       console.log("[ai-provider:uso]", {
         model,
         tipo: input.tipo,
         templateBaseId: input.templateBaseId,
-        inputTokens: resposta.usage.input_tokens,
-        outputTokens: resposta.usage.output_tokens,
+        inputTokens: resposta.usage?.prompt_tokens,
+        outputTokens: resposta.usage?.completion_tokens,
       });
 
       return {
