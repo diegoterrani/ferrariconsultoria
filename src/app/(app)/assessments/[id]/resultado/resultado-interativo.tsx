@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { GerarEntregavelModal } from "../../../entregaveis/gerar-entregavel-modal";
+import { RelatorioPdfModal } from "./relatorio-modal";
 
 /**
  * Seção "Recomendação comercial" + modal "Registrar decisão do cliente"
@@ -10,10 +11,9 @@ import { GerarEntregavelModal } from "../../../entregaveis/gerar-entregavel-moda
  * editável — a decisão final é da administradora, nunca soma
  * automaticamente (texto do próprio spec).
  *
- * Geração de PDF (seção 6.1) fica fora desta fatia — botão presente e
- * desabilitado com tooltip explicando o motivo, status honesto em vez de
- * fingir que funciona (mesmo princípio do README: nenhuma feature declarada
- * pronta sem estar de fato implementada e testada).
+ * Geração de PDF (seção 6.1): `RelatorioPdfModal` abre o preview de verdade
+ * (`/api/assessments/[id]/relatorio`) — ver esse arquivo para o racional de
+ * por que "Enviar ao cliente" continua desabilitado dentro do modal.
  */
 
 const PACOTES = ["Básico", "Premium", "Implantação"] as const;
@@ -89,14 +89,7 @@ export function ResultadoInterativo({
 
           <GerarEntregavelModal tenantId={tenantId} assessmentId={assessmentId} />
 
-          <button
-            type="button"
-            disabled
-            title="Geração de PDF ainda não implementada nesta versão — próximo passo do módulo B1."
-            className="cursor-not-allowed rounded-md border border-neutral-300 px-4 py-2 text-sm text-neutral-400 dark:border-neutral-700"
-          >
-            Gerar relatório em PDF
-          </button>
+          <RelatorioPdfModal assessmentId={assessmentId} />
         </div>
 
         {salvo && (

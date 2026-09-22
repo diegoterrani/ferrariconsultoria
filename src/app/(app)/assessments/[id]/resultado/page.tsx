@@ -3,13 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { withTenantContext } from "@/lib/db";
 import { nivelAtencao, textoNivelAtencao } from "@/lib/apresentacao/nivel-atencao";
+import { BENCHMARK_ROTATIVIDADE_SETOR } from "@/lib/apresentacao/benchmark-setor";
 
 import { ResultadoInterativo } from "./resultado-interativo";
-
-// Benchmark estático (spec seção 6.1: "dado estático, atualizável só por
-// quem tem acesso admin"). Fica em código nesta fatia — vira campo editável
-// via UI admin quando essa tela existir; não é escopo desta.
-const BENCHMARK_ROTATIVIDADE_SETOR = 77.6;
 
 type RespostasStep1 = { razaoSocial?: string };
 

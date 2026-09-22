@@ -226,12 +226,18 @@ function BarraDeProgresso({ passoAtual }: { passoAtual: 1 | 2 | 3 }) {
   );
 }
 
+// `<label>` envolve o campo (em vez de `htmlFor`/`id`) — associação implícita
+// que funciona sem coordenar ids únicos entre os passos do wizard, e é o que
+// torna os campos localizáveis por rótulo em teste (`getByLabel`), inclusive
+// no teste E2E obrigatório #4 (tests/e2e/diagnostico-completo.spec.ts). Antes
+// desta correção o `<label>` só envolvia o texto, sem associação nenhuma com
+// o input — gap de acessibilidade real, não só um problema de teste.
 function Campo({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</label>
+    <label className="flex flex-col gap-1">
+      <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</span>
       {children}
-    </div>
+    </label>
   );
 }
 

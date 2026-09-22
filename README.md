@@ -5,26 +5,36 @@ para clientes da Ferrari Consultoria.
 
 **Status atual: os três módulos de Prioridade 1 do MVP (B1, B6, C1) estão
 implementados e autenticados — o PRD chama esse trio de "o único que de
-fato alivia o gargalo de capacidade da fundadora".** A infraestrutura
-(deploy, banco, isolamento multi-tenant, CI/CD) já estava validada; a
-fase B1 implementou login (Auth.js, credenciais), wizard de 3 passos,
-scoring determinístico, página de resultado com recomendação comercial
-e o registro de decisão do cliente que alimenta o funil. A fase B6
-implementou o layout autenticado com registro global de horas,
-capacidade semanal configurável, a carteira de clientes (lista +
-detalhe por abas), o painel de capacidade (gráfico de barras
-empilhadas), o Kanban comercial (drag-and-drop nativo, sem dependência
-nova) e a geração mensal de cobranças. A fase C1 implementou a geração
-assistida de entregáveis por IA (Anthropic/Claude) com biblioteca de
-templates, personalização a partir do assessment e a máquina de estados
-de revisão humana obrigatória.
+fato alivia o gargalo de capacidade da fundadora" — e o último gap dentro
+da própria Prioridade 1 (geração de PDF do resultado do B1) também foi
+fechado.** A infraestrutura (deploy, banco, isolamento multi-tenant,
+CI/CD) já estava validada; a fase B1 implementou login (Auth.js,
+credenciais), wizard de 3 passos, scoring determinístico, página de
+resultado com recomendação comercial, geração de relatório em PDF e o
+registro de decisão do cliente que alimenta o funil. A fase B6 implementou
+o layout autenticado com registro global de horas, capacidade semanal
+configurável, a carteira de clientes (lista + detalhe por abas), o painel
+de capacidade (gráfico de barras empilhadas), o Kanban comercial
+(drag-and-drop nativo, sem dependência nova) e a geração mensal de
+cobranças. A fase C1 implementou a geração assistida de entregáveis por IA
+(Anthropic/Claude) com biblioteca de templates, personalização a partir do
+assessment e a máquina de estados de revisão humana obrigatória.
 
-**O que ainda falta no MVP, honestamente:** o botão "Gerar relatório em
-PDF" da página de resultado do B1 continua desabilitado (geração de PDF
-não implementada); e `ANTHROPIC_API_KEY` precisa estar configurada no
-Vercel (Production e Preview) para o C1 funcionar de fato em produção —
-sem ela, a rota de geração responde 502 com um erro explícito, não falha
-silenciosa.
+**O que ainda falta no MVP, honestamente:**
+- `ANTHROPIC_API_KEY` precisa estar configurada no Vercel (Production e
+  Preview) para o C1 funcionar de fato em produção — sem ela, a rota de
+  geração responde 502 com um erro explícito, não falha silenciosa.
+- "Enviar ao cliente", a segunda opção do modal de PDF (spec seção 6.1),
+  está desabilitada com tooltip — não existe e-mail do cliente no modelo
+  `Tenant` nem serviço de envio configurado; depende do portal do cliente
+  (módulo A1-A3, Prioridade 3 do PRD). Ver o comentário em
+  `src/app/api/assessments/[id]/relatorio/route.ts`.
+- O teste obrigatório #4 (E2E, `tests/e2e/diagnostico-completo.spec.ts`)
+  está escrito e cobre o caminho completo — login → wizard → resultado →
+  download do PDF — mas só roda de fato quando o secret `DATABASE_URL_TEST`
+  existir no GitHub Actions (projeto Supabase de staging); até lá, o job
+  `e2e` do CI fica desativado pela própria condição `if:` do workflow, não
+  por omissão.
 
 Fonte da arquitetura e das decisões abaixo:
 `.board/phases/f3_escopo_mvp/especificacao_plataforma_dev.md` (spec técnica
@@ -37,10 +47,17 @@ TypeScript ponta a ponta · Next.js 16 (App Router, Turbopack) · Prisma
 (`engineType = "client"`, driver adapters — sem binário nativo, alinhado ao
 runtime serverless do Vercel) · PostgreSQL via Supabase (Row-Level Security
 para isolamento multi-tenant) · Auth.js (credenciais + magic link) ·
-`@anthropic-ai/sdk` (módulo C1, atrás de `src/lib/ai-provider.ts`) · Vitest +
-Playwright · GitHub Actions.
+`@anthropic-ai/sdk` (módulo C1, atrás de `src/lib/ai-provider.ts`) ·
+`pdfkit` (geração do PDF de resultado, atrás de `src/lib/relatorio/relatorio-pdf.ts`)
+· Vitest + Playwright · GitHub Actions.
 
 Racional de cada escolha: seção 2 da especificação técnica.
+`pdfkit` é a exceção fora da seção 2 (o documento não previa geração de PDF
+como dependência): desenha o PDF programaticamente, sem navegador headless
+(Puppeteer/Playwright renderizando HTML custaria ~300MB+ de bundle e
+segundos de cold start numa função serverless do Vercel — mesma restrição
+que levou a IA do C1 a rodar síncrona em vez de fila) e sem binário nativo.
+Ver o comentário completo em `src/lib/relatorio/relatorio-pdf.ts`.
 
 **Desvio deliberado da seção 2 (documentado em `api/deliverables/route.ts`):**
 a spec recomenda uma fila de jobs assíncronos (Inngest ou BullMQ+Redis) para
@@ -145,8 +162,15 @@ confirmar cobertura de RLS.
   `src/lib/apresentacao/nivel-atencao.ts` (tradução score → texto,
   deliberadamente fora do motor de score, linguagem não-alarmista da seção
   8.4), `src/app/(app)/assessments/[id]/resultado` (gauge, benchmark
-  estático, modal de decisão do cliente), rotas de API em
-  `src/app/api/assessments/**` e `src/app/api/pipeline-leads`.
+  estático — `src/lib/apresentacao/benchmark-setor.ts`, única fonte de
+  verdade também usada pelo PDF —, modal de decisão do cliente, modal de
+  preview do relatório em PDF), rotas de API em `src/app/api/assessments/**`
+  e `src/app/api/pipeline-leads`. Geração do PDF: `src/lib/relatorio/relatorio-pdf.ts`
+  (`pdfkit`, ver Stack acima) e `GET /api/assessments/[id]/relatorio` (mesma
+  rota serve preview — `?preview=1`, `Content-Disposition: inline` — e
+  download — sem o parâmetro, `attachment` —, nunca duas implementações que
+  poderiam divergir; 409 se o diagnóstico ainda não foi calculado; 502
+  explícito se a geração falhar, nunca um PDF corrompido).
 - **Módulo B6 completo (carteira, capacidade, pipeline, faturamento)**:
   layout autenticado compartilhado `src/app/(app)/layout.tsx` (Next 16
   route group — agrupa `/`, `/assessments/**` e `/carteira/**` sob um
@@ -198,9 +222,11 @@ confirmar cobertura de RLS.
   (`engineType = "client"` exige um driver adapter explícito) e expõe
   `withTenantContext` — caminho único para qualquer query de aplicação, ver
   "Segurança multi-tenant" acima.
-- **Testes**: `src/lib/cnpj.test.ts` e
-  `src/lib/scoring/exposicao-trabalhista.test.ts` (unitários, algoritmo/
-  regras de negócio puras), `src/lib/carteira/pacotes.test.ts`,
+- **Testes**: `src/lib/cnpj.test.ts`,
+  `src/lib/scoring/exposicao-trabalhista.test.ts` e
+  `src/lib/relatorio/relatorio-pdf.test.ts` (unitários — o último confere
+  que o resultado é um PDF de verdade, assinatura de bytes `%PDF-`, e que a
+  geração nunca lança para nenhum score entre 0 e 100), `src/lib/carteira/pacotes.test.ts`,
   `src/lib/carteira/periodo.test.ts` e `src/lib/carteira/semanas.test.ts`
   (unitários — tabela de preços, limites de mês em UTC incluindo virada
   de ano, bucketing de semana ISO com segunda-feira como início,
@@ -210,26 +236,37 @@ confirmar cobertura de RLS.
   API do B6 — registro de horas, edição de tenant, capacidade,
   movimentação de card no pipeline, a ponte aceite→pacoteContratado
   testada nos dois sentidos, preview e geração idempotente de cobranças,
-  status manual) e `tests/integration/deliverable-state-machine.test.ts`
+  status manual), `tests/integration/deliverable-state-machine.test.ts`
   (as rotas de API do C1 — `@/lib/ai-provider` também mockado, nenhuma
   chamada de rede real em teste; cobre as 3 transições sequenciais
   válidas, cada pulo de estado possível rejeitado com 409, edição de
   conteúdo permitida só antes de aprovado, e que nenhum `Deliverable` é
-  gravado quando a IA falha). Todos os arquivos de integração seguem o mesmo padrão: 401/403
-  sempre antes de tocar o banco, corpo inválido rejeitado, e o contexto
-  de tenant passado pra `withTenantContext` vem sempre da sessão, nunca
-  do corpo da requisição, mesmo quando o corpo tenta injetar campos como
-  `tenantId`/`estagio`/`decisao`/`status` — mockando `@/lib/auth` e
-  `@/lib/db`, não precisa de banco real. Dos 4 testes obrigatórios da
-  seção 9 da spec: #3 (scoring determinístico) está coberto pelo teste
-  unitário do motor de score; #2 (máquina de estados de deliverable) está
-  coberto por `deliverable-state-machine.test.ts`; #1 (isolamento RLS,
-  precisa de banco real) e #4 (E2E do Playwright, precisa do PDF do B1)
-  continuam pendentes — ver comentário em cada arquivo, status honesto.
+  gravado quando a IA falha) e `tests/integration/relatorio-api.test.ts`
+  (a rota do PDF — `@/lib/relatorio/relatorio-pdf` também mockado aqui, o
+  conteúdo do PDF em si é responsabilidade do teste unitário; cobre 401,
+  404, 409 sem diagnóstico calculado, os headers de preview vs. download,
+  o fallback do pacote sugerido para "Básico" quando não há `PipelineLead`
+  ainda, e 502 explícito na falha de geração). Todos os arquivos de
+  integração seguem o mesmo padrão: 401/403 sempre antes de tocar o banco,
+  corpo inválido rejeitado, e o contexto de tenant passado pra
+  `withTenantContext` vem sempre da sessão, nunca do corpo/URL da
+  requisição — mockando `@/lib/auth` e `@/lib/db`, não precisa de banco
+  real. Dos 4 testes obrigatórios da seção 9 da spec: #3 (scoring
+  determinístico) está coberto pelo teste unitário do motor de score; #2
+  (máquina de estados de deliverable) está coberto por
+  `deliverable-state-machine.test.ts`; #4 (E2E do Playwright,
+  `tests/e2e/diagnostico-completo.spec.ts`) está escrito — login real →
+  wizard de 3 passos → resultado → download do PDF, com `%PDF-` conferido
+  nos bytes baixados — mas só roda de fato com `DATABASE_URL` (staging)
+  disponível, mesma exigência de #1 (isolamento RLS,
+  `tests/integration/tenant-isolation.test.ts`); os dois continuam
+  pendentes de execução real até o secret `DATABASE_URL_TEST` existir no
+  GitHub Actions — ver comentário em cada arquivo, status honesto.
 
 ## O que NÃO existe ainda (não é bug, é escopo)
 
-Geração de PDF do resultado do B1 (botão desabilitado na tela, spec seção
+"Enviar ao cliente" no modal de PDF (botão desabilitado na tela — sem
+e-mail do cliente no schema nem serviço de envio configurado, spec seção
 6.1), portal do cliente (módulo A1-A3), Supabase Storage, e os módulos de
 Prioridade 2/3 do PRD (C2 — LGPD/operador de dados; B2-B5 — recrutamento,
 admissão, folha, gestão de desempenho). Ver seção 6 da spec técnica para
